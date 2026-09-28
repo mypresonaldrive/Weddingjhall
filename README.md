@@ -109,3 +109,13 @@ Open **Pricing models** to create, edit, deactivate or delete named menu package
 Use a booking’s printer action for either a **full financial confirmation** or an **event-only copy without financial fields**. Both support browser printing and Save as PDF. See [the model/menu and printing guide](docs/BOOKING-PACKAGES.md).
 
 Appearance settings offer **Periwinkle, Emerald, Ocean Blue and custom colors**, with Light, Dark and System modes. Choices persist in the current browser; light mode uses near-black body text.
+
+### Readability improvements
+
+Forms use stronger, contrast-tested field boundaries, visible keyboard focus, required/optional labels and larger input text. Mobile forms stack into a single column with 16px input text and larger action targets. Long-form server validation errors are announced and focused automatically. These changes apply across the existing light/dark palettes without changing booking calculations.
+
+Optional visual regression checks: `tests/readability-ui.mjs` uses Playwright Core and Sparticuz Chromium against a running development server (`UI_TEST_URL`, default `http://localhost:3000`). These browser tools are not application dependencies.
+
+### Sidebar navigation
+
+The top-left hamburger toggles the desktop sidebar and remembers that preference in the browser. On mobile it opens a temporary navigation drawer with a close button, backdrop dismissal and Escape support. Keyboard focus stays inside the open drawer and returns to the toggle on close; navigating or resizing back to desktop closes the mobile drawer. Optional browser coverage: `tests/sidebar-ui.mjs` (same setup as readability checks).

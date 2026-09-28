@@ -1,0 +1,48 @@
+// Optional browser dependencies, shared with readability-ui.mjs.
+import assert from 'node:assert/strict';
+import { chromium as pw } from 'playwright-core';
+import chromium from '@sparticuz/chromium';
+const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args,headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const expanded=()=>page.locator('#sidebar-toggle').getAttribute('aria-expanded');
+try{
+ await page.goto(process.env.UI_TEST_URL||'http://localhost:3000');
+ await page.locator('#sidebar-toggle').waitFor();
+ assert.equal(await expanded(),'true');
+ await page.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
+ assert.equal(await expanded(),'false');
+ assert.equal(await page.locator('.main-shell').evaluate(el=>getComputedStyle(el).marginLeft),'0px');
+ assert.equal(await page.locator('#workspace-sidebar').evaluate(el=>el.inert),true);
+ await page.reload();await page.locator('#sidebar-toggle').waitFor();assert.equal(await expanded(),'false');
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();assert.equal(await expanded(),'true');
+ await page.setViewportSize({width:390,height:844});assert.equal(await expanded(),'false');
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();assert.equal(await expanded(),'true');
+ assert.equal(await page.locator('.main-shell').evaluate(el=>el.inert),true);
+ assert.equal(await page.evaluate(()=>document.body.style.overflow),'hidden');
+ assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Close navigation');
+ await page.keyboard.press('Shift+Tab');assert.equal(await page.evaluate(()=>document.activeElement.className),'sidebar-profile');
+ await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Close navigation');
+ await page.keyboard.press('Escape');assert.equal(await expanded(),'false');
+ assert.equal(await page.evaluate(()=>document.activeElement.id),'sidebar-toggle');
+ assert.equal(await page.evaluate(()=>document.body.style.overflow),'');
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.getByRole('button',{name:'Pricing models',exact:true}).click();assert.equal(await expanded(),'false');
+ await page.getByRole('button',{name:'Add pricing model',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.getByRole('button',{name:'Close navigation',exact:true}).click();assert.equal(await expanded(),'false');
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.locator('.sidebar-backdrop').click({position:{x:380,y:200}});assert.equal(await expanded(),'false');
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});assert.equal(await expanded(),'true');
+ assert.equal(await page.evaluate(()=>document.body.style.overflow),'');
+ await page.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await page.evaluate(async()=>{const{applyAppearance}=await import('/src/appearance.js');applyAppearance({mode:'dark'});});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.screenshot({path:'/home/user/sidebar-mobile-dark.png'});
+ await page.setViewportSize({width:1440,height:1000});assert.equal(await expanded(),'false');
+ assert.deepEqual(errors,[]);
+ console.log('PASS sidebar: desktop toggle/persistence, mobile drawer/close/backdrop/Escape, focus trap/restore, navigation, resize and dark mobile layout.');
+}finally{await browser.close();}

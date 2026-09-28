@@ -1,0 +1,135 @@
+/* Readability and interaction layer. Load after theme/component styles so compact
+   legacy breakpoints cannot shrink essential labels, values or tap targets. */
+:root[data-theme] body{font-size:14px;line-height:1.55}
+:root[data-theme] :is(input,textarea,select,button){font-family:inherit}
+:root[data-theme] :is(p,small){line-height:1.65}
+:root[data-theme] :is(.page-heading p,.panel-heading p,.catalog-banner p,.catalog-plan>p,.catalog-service>p,.hall-body p){font-size:13px}
+:root[data-theme] :is(.eyebrow,.nav-label,.menu-label){font-size:11px;letter-spacing:1.2px;font-weight:600}
+:root[data-theme] .nav-item{font-size:14px;min-height:44px;padding:11px 13px}
+:root[data-theme] .sidebar{overflow-y:auto;overscroll-behavior:contain}
+:root[data-theme] :is(.workspace-switch strong,.sidebar-profile strong,.breadcrumb){font-size:13px}
+:root[data-theme] :is(.workspace-switch small,.sidebar-profile small,.help-card p,.help-card h4){font-size:12px}
+:root[data-theme] :is(.stat-top,.stat-foot,.stat-card>small,.panel-heading p,.upcoming-info>span,.upcoming-info>small,.upcoming-footer){font-size:12px}
+:root[data-theme] :is(.panel-heading h3,.section-line h2,.upcoming-info strong){font-size:15px}
+:root[data-theme] .stat-card{padding:20px;min-width:0}
+:root[data-theme] .stat-top{gap:8px}
+:root[data-theme] .stat-foot{flex-wrap:wrap;line-height:1.6}
+:root[data-theme] :is(.button,.small-select,.text-button,.tabs button){font-size:13px;font-weight:600;min-height:40px}
+:root[data-theme] .button{padding:10px 16px;border-radius:8px;white-space:normal;line-height:1.4}
+:root[data-theme] :is(.icon-button,.row-action,.payment-shortcut){min-width:36px;min-height:36px;border-radius:8px;flex-shrink:0}
+:root[data-theme] :is(.icon-button,.row-action):hover{color:var(--primary);background:var(--selected)}
+:root[data-theme] :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+:root[data-theme] button:disabled{cursor:not-allowed;opacity:.55;box-shadow:none}
+:root[data-theme] :is(.modal label,.settings-panel label,.auth-form label,.custom-color-control label){font-size:13px!important;font-weight:600;line-height:1.55;gap:8px}
+:root[data-theme] :is(label input,label select,label textarea,.menu-course-top input,.add-food-menu select,.add-food-course select,.menu-catalog-preview>select,.small-select){border:1px solid var(--field-border);border-radius:8px;background-color:var(--field-bg);color:var(--ink);font-size:14px!important;font-weight:400;min-height:44px;padding:11px 12px;line-height:1.5}
+:root[data-theme] :is(label input,label select,label textarea,.menu-course-top input):hover:not(:disabled){border-color:var(--primary)}
+:root[data-theme] :is(label input,label select,label textarea,.menu-course-top input):focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 16%,transparent)}
+:root[data-theme] :is(input,textarea)::placeholder{color:var(--text-muted);opacity:1;font-weight:400}
+:root[data-theme] label textarea{min-height:108px;resize:vertical}
+:root[data-theme] :is(label input,label select,label textarea):disabled{background:var(--table-head);color:var(--text-secondary);border-style:dashed;cursor:not-allowed}
+:root[data-theme] :is(input[type='checkbox'],input[type='radio']){min-height:20px;min-width:20px;width:20px;height:20px;padding:0;accent-color:var(--primary);flex-shrink:0}
+/* Full-card appearance radios intentionally overlay their entire label. */
+:root[data-theme] .display-mode input{width:100%;height:100%;min-height:0}
+:root[data-theme] :is(.filter-search,.addon-search,.global-search,.inclusion-input-wrap){border:1px solid var(--field-border);border-radius:8px;min-height:44px}
+:root[data-theme] :is(.filter-search input,.addon-search input,.global-search input){font-size:14px;min-height:28px;width:100%;min-width:0}
+:root[data-theme] :is(.filter-search,.addon-search,.inclusion-input-wrap):focus-within{outline:3px solid var(--focus);outline-offset:2px}
+:root[data-theme] .global-search{padding:5px 10px}
+:root[data-theme] .form-grid{gap:22px 20px}
+.field-label{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.required-mark{color:var(--danger-ink);font-weight:700}
+.optional-label{font-size:11px;font-weight:400;color:var(--text-muted)}
+.form-guidance{margin:0 0 22px;font-size:12px;color:var(--text-secondary)}
+.form-guidance>span{color:var(--danger-ink);font-weight:700;margin-right:3px}
+:root[data-theme] :is(.form-section-label,.booking-section-heading h3,.food-editor-heading h3){font-size:16px;font-weight:650}
+:root[data-theme] :is(.info-banner,.info-banner p,.info-banner span,.form-error,.delete-confirm p){font-size:13px;line-height:1.7}
+:root[data-theme] .form-error{border:1px solid var(--danger-ink);border-left-width:4px;padding:14px 16px;border-radius:8px;scroll-margin:20px}
+:root[data-theme] :is(.modal-footer,.modal-heading){background:var(--surface)}
+:root[data-theme] .modal-footer{box-shadow:0 -5px 18px var(--shadow);gap:12px}
+:root[data-theme] .modal-price-preview small{font-size:12px}
+:root[data-theme] .modal-price-preview strong{font-size:22px;font-variant-numeric:tabular-nums}
+:root[data-theme] :is(.package-hint,.menu-editor-note,.service-agreement-note,.booking-section-heading p,.food-editor-heading p,.food-editor-heading>small,.menu-course-hint,.active-menu-header small,.food-menu-empty p,.menu-template p,.menu-advisory,.catering-settings label>small,.plan-inclusions p,.plan-inclusions small,.ceremony-details p,.ceremony-details>small,.print-help,.print-privacy-note){font-size:12px;line-height:1.7;font-weight:400}
+:root[data-theme] :is(.menu-section-editor label,.menu-section-editor textarea){font-size:14px!important}
+:root[data-theme] .menu-section-editor{padding:18px;background:var(--table-head)}
+:root[data-theme] :is(.food-menu-tabs button,.food-menu-view small,.menu-remove,.menu-template .button,.add-food-menu .button,.add-food-course .button){font-size:12px!important;line-height:1.5}
+:root[data-theme] .food-menu-tabs button{min-height:40px;padding:9px 12px}
+:root[data-theme] :is(.food-menu-view strong,.food-menu-courses h4,.active-menu-header strong,.menu-template strong,.menu-catalog-preview .food-menu-view strong){font-size:14px}
+:root[data-theme] .food-menu-courses li{font-size:13px;line-height:1.65}
+:root[data-theme] .food-menu-view>summary{padding:16px;min-height:64px}
+:root[data-theme] .food-menu-view[open]>summary{border-bottom:1px solid var(--border);margin-bottom:15px;background:var(--subtle)}
+:root[data-theme] :is(.plan-choice>strong,.addon-checkbox strong){font-size:15px}
+:root[data-theme] :is(.plan-choice>span:not(.plan-choice-top),.plan-choice>small,.addon-checkbox small,.addon-rate,.addon-rate em,.catalog-plan-facts,.catalog-menu-rates>div,.catalog-price>span,.catalog-card-footer>small,.service-card-footer small,.service-features li,.feature-text){font-size:12px;line-height:1.7}
+:root[data-theme] :is(.plan-choice.selected,.addon-option.selected,.print-version-options>button.selected){border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+:root[data-theme] .quote-line{font-size:14px;padding:11px 0}
+:root[data-theme] :is(.quote-advance,.plate-calculation){font-size:13px;flex-wrap:wrap}
+:root[data-theme] :is(.quote-line strong,.quote-total strong,.catalog-price strong,td strong){font-variant-numeric:tabular-nums}
+:root[data-theme] th{font-size:11px;font-weight:650;padding-top:15px;padding-bottom:15px;letter-spacing:.6px}
+:root[data-theme] td{font-size:13px;padding-top:17px;padding-bottom:17px;line-height:1.6}
+:root[data-theme] td strong{font-size:14px}
+:root[data-theme] :is(td small,.badge,.table-footer,.filter-summary){font-size:12px}
+:root[data-theme] .badge{padding:5px 10px;font-weight:600;white-space:nowrap}
+:root[data-theme] .row-actions{gap:6px}
+:root[data-theme] :is(.view-details span,.view-details strong,.print-version-options p,.print-booking-intro p){font-size:13px;line-height:1.7}
+:root[data-theme] .view-details strong{overflow-wrap:anywhere}
+:root[data-theme] .print-version-options strong{font-size:15px}
+:root[data-theme] :is(.appearance-section-title p,.appearance-panel .panel-heading p,.appearance-footer p,.palette-card>small,.display-mode small,.custom-colors p,.appearance-save-state){font-size:12px}
+:root[data-theme] :is(.palette-card-title strong,.display-mode strong){font-size:14px}
+@media(max-width:1100px){
+ :root[data-theme] .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ :root[data-theme] .catalog-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ :root[data-theme] .catalog-metrics{gap:18px}
+ :root[data-theme] .catalog-toolbar{flex-wrap:wrap}
+}
+@media(max-width:700px){
+ :root[data-theme] .main-content{padding:22px 16px}
+ :root[data-theme] .topbar{padding:0 12px}
+ :root[data-theme] .topbar-right{gap:6px}
+ :root[data-theme] .breadcrumb{font-size:12px;gap:5px}
+ :root[data-theme] .page-heading h1{font-size:26px}
+ :root[data-theme] :is(.button,.icon-button,.row-action,.tabs button,.text-button){min-height:44px}
+ :root[data-theme] :is(.icon-button,.row-action){min-width:44px}
+ :root[data-theme] .stat-card{padding:16px}
+ :root[data-theme] .stat-top{flex-wrap:wrap;font-size:12px}
+ :root[data-theme] .stat-number{font-size:28px}
+ :root[data-theme] .stat-foot{font-size:11px}
+ :root[data-theme] :is(.form-grid,.quote-adjustments,.plan-choices,.catalog-plan-grid,.catalog-service-grid){grid-template-columns:minmax(0,1fr)}
+ :root[data-theme] :is(label input,label select,label textarea,.menu-course-top input,.add-food-menu select,.add-food-course select,.menu-catalog-preview>select,.filter-search input,.addon-search input,.small-select,.menu-section-editor textarea){font-size:16px!important;min-width:0}
+ :root[data-theme] .modal{max-height:calc(100dvh - 16px);border-radius:14px}
+ :root[data-theme] .modal-backdrop{padding:8px}
+ :root[data-theme] :is(.modal-body,.booking-modal .modal-body){padding:22px 18px}
+ :root[data-theme] :is(.modal-heading,.booking-modal .modal-heading){padding:18px;gap:10px}
+ :root[data-theme] :is(.modal-footer,.booking-modal .modal-footer){padding:12px 16px max(12px,env(safe-area-inset-bottom));flex-wrap:wrap;gap:8px}
+ :root[data-theme] .modal-footer .button{font-size:13px;padding:11px 14px}
+ :root[data-theme] .modal-price-preview:has(strong){flex:1 0 100%;display:flex;justify-content:space-between;align-items:center;order:-1;margin:0 0 5px}
+ :root[data-theme] .modal-footer .delete-button{font-size:12px;min-height:44px}
+ :root[data-theme] .food-editor-heading{flex-wrap:wrap}
+ :root[data-theme] .food-editor-heading>div{flex:1;min-width:190px}
+ :root[data-theme] .food-editor-heading>small{margin-left:47px}
+ :root[data-theme] :is(.add-food-menu,.add-food-course){flex-wrap:wrap}
+ :root[data-theme] :is(.add-food-menu select,.add-food-course select){flex:1 1 100%}
+ :root[data-theme] :is(.add-food-menu .button,.add-food-course .button){width:100%;justify-content:center}
+ :root[data-theme] .menu-section-editor{padding:14px}
+ :root[data-theme] .menu-course-top>input{flex-basis:75%;width:0}
+ :root[data-theme] .booking-section-heading{flex-wrap:wrap}
+ :root[data-theme] .booking-section-heading>div{flex:1;min-width:190px}
+ :root[data-theme] .catalog-toolbar .filter-search{width:100%;min-width:0}
+ :root[data-theme] :is(.panel-heading,.heading-actions,.resource-heading,.catalog-card-footer){flex-wrap:wrap;gap:12px}
+ :root[data-theme] .catalog-plan{padding:22px}
+ :root[data-theme] .catalog-price{flex-wrap:wrap}
+ :root[data-theme] .booking-payment-summary{flex-wrap:wrap;gap:16px}
+ :root[data-theme] .booking-payment-summary>div{min-width:110px}
+ :root[data-theme] .view-details{grid-template-columns:minmax(0,1fr)}
+ :root[data-theme] .display-mode-options{gap:8px}
+ :root[data-theme] .display-mode{padding:14px 9px}
+ :root[data-theme] .display-mode strong{font-size:13px}
+ :root[data-theme] .display-mode small{font-size:11px}
+}
+/* Reserve room for select arrows and keep the keyboard shortcut on one line. */
+:root[data-theme] .small-select{padding-right:32px}
+:root[data-theme] .global-search kbd{white-space:nowrap;flex-shrink:0;width:auto;min-width:32px}
+:root[data-theme] .hero p{font-size:13px;line-height:1.65}
+:root[data-theme] .hero-label{font-size:10px;letter-spacing:1px}
+@media(max-width:700px){
+ :root[data-theme] .hero{height:auto;min-height:290px}
+ :root[data-theme] .hero-copy{padding:26px 20px}
+ :root[data-theme] .hero-label{font-size:9px}
+}

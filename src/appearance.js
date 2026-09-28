@@ -49,7 +49,7 @@ export function appearanceTokens(raw, systemDark=false) {
   return { mode, tokens: {
     '--canvas':canvas,'--surface':surface,'--elevated':elevated,'--ink':dark?'#f2f4f8':'#15171c',
     '--text-secondary':dark?'#b6bfce':'#535b68','--text-muted':dark?'#a5afc0':'#656e7c',
-    '--border':border,'--subtle':subtle,'--selected':selected,'--primary':primary,'--primary-ink':primaryInk,
+    '--field-border':dark?'#8795aa':'#7c8597','--border':border,'--subtle':subtle,'--selected':selected,'--primary':primary,'--primary-ink':primaryInk,
     '--primary-hover':mix(dark?'#ffffff':'#000000',primary,.10),'--accent-source':colors.accent,
     '--lavender':colors.accent,'--lavender-muted':mix(colors.primary,colors.accent,.35),'--hero-bg':subtle,
     '--green':primary,'--dark':dark?'#f2f4f8':'#15171c','--muted':dark?'#b6bfce':'#535b68',
