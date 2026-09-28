@@ -6,7 +6,8 @@
     "dev": "node server.js",
     "build": "vite build",
     "start": "NODE_ENV=production node server.js",
-    "test": "node tests/api.mjs"
+    "test": "node tests/api.mjs",
+    "test:deployment": "npm run build && node tests/deployment.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -14,7 +15,12 @@
     "express": "^4.21.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
     "vite": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

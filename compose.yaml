@@ -1,0 +1,16 @@
+services:
+  gatherhall:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATA_DIR: /app/data
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    # Deliberately no database volume: Supabase migration is planned.
+    # Recreating this container discards accounts, bookings, and other local data.
+    stop_grace_period: 15s

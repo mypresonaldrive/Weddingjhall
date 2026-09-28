@@ -18,6 +18,18 @@ npm run build
 npm start
 ```
 
+## Docker / Coolify
+
+A multi-stage Dockerfile, non-root runtime, configurable port, health check, and local Compose setup are included.
+
+```sh
+docker compose up --build -d
+```
+
+**Coolify:** choose the Dockerfile build pack, `/Dockerfile`, application port `3000`, and health check `GET /healthz`. See [the full deployment guide](docs/COOLIFY.md).
+
+**Temporary database only:** no SQLite volume is configured, as Supabase migration is planned. Recreating the container resets local data. Demo access remains enabled; do not use this deployment for real customer data until the database and production authentication setup are ready.
+
 ## Demo accounts
 
 All demo passwords: `Welcome123!`

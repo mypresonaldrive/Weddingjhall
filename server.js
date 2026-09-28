@@ -4,9 +4,13 @@ import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 
-fs.mkdirSync('data', { recursive: true });
-const db = new DatabaseSync('data/gatherhall.sqlite');
+const port = Number(process.env.PORT || 3000);
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer between 1 and 65535.');
+const dataDir = path.resolve(process.env.DATA_DIR || 'data');
+fs.mkdirSync(dataDir, { recursive: true });
+const db = new DatabaseSync(path.join(dataDir, 'gatherhall.sqlite'));
 db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS tenants(id TEXT PRIMARY KEY,name TEXT); CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,tenant TEXT,name TEXT,email TEXT UNIQUE,password TEXT,role TEXT); CREATE TABLE IF NOT EXISTS account_links(record_id TEXT PRIMARY KEY,user_id TEXT); CREATE TABLE IF NOT EXISTS client_access(user_id TEXT PRIMARY KEY,client_id TEXT); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT,expires INTEGER); CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY,tenant TEXT,kind TEXT,body TEXT);`);
 const put=(id,tenant,kind,body)=>db.prepare('INSERT INTO records VALUES(?,?,?,?)').run(id,tenant,kind,JSON.stringify(body));
 if(!db.prepare('SELECT id FROM tenants LIMIT 1').get()){
@@ -27,7 +31,15 @@ if(!db.prepare('SELECT id FROM tenants LIMIT 1').get()){
  }
 }
 for(const tid of ['t1','t2']){db.prepare('INSERT OR IGNORE INTO client_access VALUES(?,?)').run(tid+'client',tid+'c0');db.prepare('INSERT OR IGNORE INTO account_links VALUES(?,?)').run(tid+'c0',tid+'client');db.prepare('INSERT OR IGNORE INTO account_links VALUES(?,?)').run(tid+'s0',tid+'staff');}
-const app=express();app.use(express.json());app.use(cookieParser());
+const app=express();
+app.disable('x-powered-by');
+// Public, lightweight readiness endpoint for Docker and Coolify.
+app.get('/healthz', (_req, res) => {
+ res.set('Cache-Control', 'no-store');
+ try { db.prepare('SELECT 1').get(); res.json({ status: 'ok' }); }
+ catch { res.status(503).json({ status: 'unavailable' }); }
+});
+app.use(express.json());app.use(cookieParser());
 const publicUser=u=>({id:u.id,name:u.name,email:u.email,role:u.role,tenantId:u.tenant,tenant:db.prepare('SELECT name FROM tenants WHERE id=?').get(u.tenant).name});
 app.post('/api/auth/login',(req,res)=>{const u=db.prepare('SELECT * FROM users WHERE email=?').get(String(req.body.email||'').toLowerCase());if(!u||!bcrypt.compareSync(req.body.password||'',u.password))return res.status(401).json({error:'Email or password is incorrect.'});const linked=db.prepare('SELECT body FROM records JOIN account_links ON records.id=account_links.record_id WHERE account_links.user_id=?').get(u.id);if(linked&&JSON.parse(linked.body).status==='Inactive')return res.status(403).json({error:'This account is inactive. Contact your workspace owner.'});const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(token,u.id,Date.now()+604800000);res.cookie('session',token,{httpOnly:true,sameSite:'lax',maxAge:604800000});res.json(publicUser(u));});
 app.post('/api/auth/register',(req,res)=>{const {name,email,password,organization}=req.body;if(!name||!organization||!email?.includes('@')||password?.length<8)return res.status(400).json({error:'Complete all fields and use a password with at least 8 characters.'});if(db.prepare('SELECT id FROM users WHERE email=?').get(email.toLowerCase()))return res.status(409).json({error:'This email is already registered.'});const tid=randomBytes(8).toString('hex'),id=randomBytes(8).toString('hex');db.prepare('INSERT INTO tenants VALUES(?,?)').run(tid,organization);db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?)').run(id,tid,name,email.toLowerCase(),bcrypt.hashSync(password,10),'owner');res.json({success:true});});
@@ -65,4 +77,18 @@ app.put('/api/:kind/:id',access,(req,res)=>{const row=db.prepare('SELECT * FROM 
 app.delete('/api/:kind/:id',access,(req,res)=>{const {id,kind}=req.params;const row=db.prepare('SELECT * FROM records WHERE id=? AND tenant=? AND kind=?').get(id,req.user.tenant,kind);if(!row)return res.status(404).json({error:'Record not found.'});if((kind==='halls'&&list(req.user.tenant,'bookings').some(b=>b.hallId===id))||(kind==='clients'&&list(req.user.tenant,'bookings').some(b=>b.clientId===id)))return res.status(409).json({error:'This record has bookings. Remove its bookings before deleting it.'});if(kind==='bookings')for(const p of list(req.user.tenant,'payments').filter(p=>p.bookingId===id))db.prepare('DELETE FROM records WHERE id=? AND tenant=?').run(p.id,req.user.tenant);const link=db.prepare('SELECT user_id FROM account_links WHERE record_id=?').get(id);if(link){db.prepare('DELETE FROM sessions WHERE user_id=?').run(link.user_id);db.prepare('DELETE FROM client_access WHERE user_id=?').run(link.user_id);db.prepare('DELETE FROM users WHERE id=? AND tenant=?').run(link.user_id,req.user.tenant);db.prepare('DELETE FROM account_links WHERE record_id=?').run(id);}db.prepare('DELETE FROM records WHERE id=? AND tenant=?').run(id,req.user.tenant);res.json({success:true});});
 
 if(process.env.NODE_ENV==='production'){app.use(express.static('dist'));app.get('*',(req,res)=>res.sendFile(process.cwd()+'/dist/index.html'));}else{const {createServer}=await import('vite');const vite=await createServer({server:{middlewareMode:true,allowedHosts:true},appType:'spa'});app.use(vite.middlewares);}
-app.listen(3000,'0.0.0.0',()=>console.log('Gatherhall running on port 3000'));
+const server = app.listen(port, '0.0.0.0', () => console.log(`Gatherhall running on port ${port}`));
+let shuttingDown = false;
+function shutdown(signal) {
+ if (shuttingDown) return;
+ shuttingDown = true;
+ console.log(`${signal}: stopping Gatherhall`);
+ const deadline = setTimeout(() => process.exit(1), 10000);
+ deadline.unref();
+ server.close(() => {
+  try { db.close(); clearTimeout(deadline); process.exit(0); }
+  catch (error) { console.error('Database shutdown failed:', error.message); process.exit(1); }
+ });
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
