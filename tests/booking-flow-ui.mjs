@@ -6,6 +6,7 @@ const browser=await pw.launch({executablePath:await chromium.executablePath(),ar
 const page=await browser.newPage({viewport:{width:1440,height:1050},reducedMotion:'reduce'}),errors=[],cleanup=[];
 page.on('pageerror',e=>errors.push(e.message));const root=process.env.UI_TEST_URL||'http://localhost:3000';
 async function add(kind,body){const r=await page.request.post(root+'/api/'+kind,{data:body});assert.equal(r.status(),201,await r.text());const data=await r.json();cleanup.push([kind,data.id]);return data;}
+const go=async n=>{await page.getByRole('button',{name:new RegExp('^Step '+n+':')}).click();await page.locator(`[data-booking-step="${n-1}"]`).waitFor({state:'visible'});};
 const waitTotal=async total=>{await page.waitForFunction(total=>document.querySelector('.quote-total strong')?.textContent===total,total);};
 try{
  await page.goto(root);await page.locator('#sidebar-toggle').waitFor();
@@ -19,21 +20,27 @@ try{
  assert.equal(await page.getByLabel('Expected guests',{exact:true}).count(),1);
  await page.getByLabel('Expected guests',{exact:true}).fill('150');
  await page.getByRole('button',{name:'Morning 08:00–14:00',exact:true}).click();
+ await go(2);
  await page.getByLabel('Pricing model',{exact:true}).selectOption(model.id);await waitTotal('₹1,25,000');
  assert.equal(await page.getByLabel('Minimum guaranteed guests',{exact:true}).inputValue(),'100');
+ await go(1);
  await page.getByLabel('Expected guests',{exact:true}).fill('180');await waitTotal('₹1,42,000');
- await page.getByText('Choose or manage extras',{exact:false}).click();
+ await go(3);
  await page.getByRole('checkbox',{name:'Add Flow browser refreshments',exact:true}).check();await waitTotal('₹1,43,800');
+ await go(1);
  await page.getByLabel('Event type',{exact:true}).selectOption('Seminar');await waitTotal('₹1,70,800');
  await page.getByRole('button',{name:'Multiple days Full days, inclusive',exact:true}).click();
  await page.getByLabel('Last booked date (included)',{exact:true}).fill('2027-01-22');await waitTotal('₹2,95,800');
+ await go(2);
  await page.getByText('Minimum guarantee & actual served (optional)',{exact:true}).click();
  await page.getByLabel('Actual served guests',{exact:true}).fill('80');await waitTotal('₹2,50,800');
  assert.match(await page.locator('.quote-basis').innerText(),/Actual served 80.*Minimum 100.*Billable 100/);
+ await go(1);
  await page.getByLabel('Expected guests',{exact:true}).fill('200');await waitTotal('₹2,50,800');
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  assert.ok(await page.locator('.modal').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+ await go(4);
  await page.locator('.quote-total').scrollIntoViewIfNeeded();
  await page.screenshot({path:'/home/user/booking-flow-review-mobile.png'});
  await page.getByRole('button',{name:'Create booking',exact:true}).click();
@@ -45,8 +52,10 @@ try{
  await page.getByRole('button',{name:'Bookings',exact:false}).first().click();
  await page.getByLabel('Search bookings',{exact:true}).fill('Browser unified flow');
  await page.getByRole('button',{name:'Edit Browser unified flow',exact:true}).click();
+ await go(2);
  await page.getByText('Minimum guarantee & actual served (optional)',{exact:true}).click();
  await page.getByLabel('Actual served guests',{exact:true}).fill('');await waitTotal('₹3,12,000');
+ await go(4);
  await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.locator('.modal').waitFor({state:'hidden'});
  booking=(await (await page.request.get(root+'/api/data')).json()).bookings.find(b=>b.id===booking.id);assert.equal(booking.total,312000);assert.equal(booking.actualGuests,null);assert.equal(booking.quote.addonLines[0].quantity,200);
  assert.deepEqual(errors,[]);

@@ -6,7 +6,8 @@
 2. Owners can create, edit, deactivate or delete pricing models and extra services. Staff and clients can view the catalog but cannot change it.
 3. Create or edit a booking, enter event details, then choose a pricing model.
 4. Enter expected guests once in **Event & duration**, choose a suggested/custom duration, then select a pricing model and meal type.
-5. Expand optional billing controls or extras only as needed. Review the synchronized estimate and save.
+5. Use **Continue** to move through Event, Pricing, Extras and Review. Optional controls stay collapsed unless needed. Use **Back** or the review card’s Edit links to make changes without losing the draft.
+6. Save only from Review. Required fields are checked on forward navigation; the complete draft and current availability/pricing are checked before saving. In-memory drafts are not saved across closing/reloading the app.
 
 Each tenant receives four reference models and eight reference services once. Owners should review their own menus, inclusions, rates and tax treatment before using these as real offers. The catalog is independently editable in each workspace. Deleted items are not automatically re-seeded on restart.
 
@@ -151,7 +152,7 @@ Use a booking row’s printer button or **Print confirmation** in booking detail
 - **Full financial copy:** saved event/menu/services, recorded charges, tax, advance, current payment records, balance, saved terms and signature lines.
 - **Event-only copy:** event details, selected menu and services, without structured prices, payments, financial terms or general booking notes.
 
-Open the preview, then choose **Print / Save as PDF**. The standalone white A4 document is independent of the app’s theme. Pending and cancelled bookings are clearly labeled and never represented as confirmed reservations. Internal operations/vendor notes are never printed. Review free-text menu/preferences before sharing: user-entered prices in those fields are not automatically redacted.
+The print selector previews the saved booking total, payments and balance for the financial version. Open the preview, then choose **Print / Save as PDF**. Charge rows show description, quantity, unit rate and amount. Financial totals precede supporting menu/service details. Use **Compact layout** for tighter spacing, and disable browser headers/footers in the print dialog if desired. The standalone white A4 document is independent of the app’s theme. Pending and cancelled bookings are clearly labeled and never represented as confirmed reservations. Internal operations/vendor notes are never printed. Review free-text menu/preferences before sharing: user-entered prices in those fields are not automatically redacted.
 
 The authenticated `/api/bookings/:id/confirmation?format=full|event` route enforces tenant and client ownership, escapes dynamic HTML and disables caching. It is not a public share link. Downloaded PDFs contain private booking data: share them only with intended recipients. A booking confirmation is not a statutory tax invoice.
 

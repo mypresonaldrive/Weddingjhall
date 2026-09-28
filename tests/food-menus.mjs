@@ -33,6 +33,7 @@ try{
  assert.equal((await req(path)).status,401);assert.equal((await req(path,'GET',null,other)).status,404);
  assert.equal((await req(path+'?format=unknown','GET',null,owner)).status,400);
  const full=await req(path,'GET',null,client);assert.equal(full.status,200);assert.equal(full.headers.get('cache-control'),'no-store');assert.ok(full.headers.get('content-security-policy').includes("default-src 'none'"));
+ assert.ok(full.data.includes('class="charges-table"'));assert.ok(full.data.includes('id="compact-print"'));assert.ok(full.data.indexOf('<h2>Booking charges')<full.data.indexOf('<h2>Agreed food menu'));
  for(const text of ['Paneer tikka','SAVED PAYMENT TERMS','PAYMENT-SECRET','₹5,000.00','₹4,500.00','&lt;img src=x onerror=alert(1)&gt;'])assert.ok(full.data.includes(text),text);
  for(const text of ['SECRET OPERATIONS','NEW CATALOG DISH','NEW TERMS','<img src=x'])assert.ok(!full.data.includes(text),text);
  const event=await req(path+'?format=event','GET',null,staff);assert.equal(event.status,200);
