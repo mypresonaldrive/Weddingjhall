@@ -52,6 +52,8 @@ try {
   env: { ...process.env, TEST_URL: base + '/api' },
  });
  console.log(stdout.trim());
+ const flow = await run(process.execPath, ['tests/booking-flow.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });
+ console.log(flow.stdout.trim());
  const menus = await run(process.execPath, ['tests/food-menus.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });
  console.log(menus.stdout.trim());
  const packages = await run(process.execPath, ['tests/packages.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });

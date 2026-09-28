@@ -133,3 +133,6 @@
  :root[data-theme] .hero-copy{padding:26px 20px}
  :root[data-theme] .hero-label{font-size:9px}
 }
+/* Dashboard captions must wrap rather than widen the mobile viewport. */
+:root[data-theme] .stat-foot{white-space:normal;overflow-wrap:anywhere}
+:root[data-theme] .stat-foot>span{min-width:0;white-space:normal}

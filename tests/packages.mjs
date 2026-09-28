@@ -47,7 +47,7 @@ try {
  // Client cannot change tax, advance, unit rates or provide discounts on a new request.
  const platePlan=await add('plans',{...plan,name:'Test plate plan',mode:'plate'});
  const requestBody={...draft,name:'Client plan request',date:'2026-12-17',planId:platePlan.id,total:1,discount:1000,taxRate:0,advancePercent:0,plateType:'Vegetarian',addOns:[]};
- const req=await request('/bookings','POST',requestBody,client);assert.equal(req.status,201,JSON.stringify(req.data));cleanup.push(['bookings',req.data.id]);assert.equal(req.data.status,'Pending');assert.equal(req.data.quote.venueAmount,0);assert.equal(req.data.total,12600);assert.equal(req.data.discount,0);assert.equal(req.data.taxRate,5);assert.equal(req.data.advancePercent,40);assert.equal(req.data.operationsNotes,'');
+ const req=await request('/bookings','POST',requestBody,client);assert.equal(req.status,201,JSON.stringify(req.data));cleanup.push(['bookings',req.data.id]);assert.equal(req.data.status,'Pending');assert.equal(req.data.quote.venueAmount,0);assert.equal(req.data.total,15750);assert.equal(req.data.discount,0);assert.equal(req.data.taxRate,5);assert.equal(req.data.advancePercent,40);assert.equal(req.data.operationsNotes,'');
  const fixed=await add('plans',{...plan,name:'Test fixed',mode:'fixed',fixedPrice:80000,maxGuests:150});
  const fixedBooking=await add('bookings',{...draft,date:'2026-12-18',planId:fixed.id,addOns:[],discount:0,taxRate:0});assert.equal(fixedBooking.total,80000);assert.equal(fixedBooking.quote.venueAmount,0);assert.equal(fixedBooking.quote.cateringAmount,0);
  const venuePlan=initial.plans.find(p=>p.mode==='venue'&&p.status==='Active');

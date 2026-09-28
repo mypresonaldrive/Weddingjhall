@@ -1,9 +1,10 @@
+import { bookingDuration } from './booking-duration.js';
 import { normalizeMenus, sampleMenus } from './food-menus.js';
-export const EVENT_TYPES = ['Wedding', 'Reception', 'Engagement / Sagai', 'Tilak', 'Roka', 'Haldi', 'Mehendi', 'Sangeet', 'Anniversary', 'Mundan', 'Janeu / Upanayan', 'Birthday', 'Corporate event', 'Other'];
+export const EVENT_TYPES = ['Wedding', 'Reception', 'Engagement / Sagai', 'Tilak', 'Roka', 'Haldi', 'Mehendi', 'Sangeet', 'Anniversary', 'Mundan', 'Janeu / Upanayan', 'Birthday', 'Seminar', 'Conference', 'Corporate event', 'Other'];
 export const PLATE_TYPES = ['Vegetarian', 'Jain / No onion-garlic', 'Non-vegetarian', 'Mixed menu'];
 export const PLAN_MODES = [
-  { value: 'venue', label: 'Venue only', description: 'Hall rental only. Catering can be arranged separately.' },
-  { value: 'plate', label: 'Per plate · venue included', description: 'Guaranteed plates + extra plates. No separate hall rent.' },
+  { value: 'venue', label: 'Venue only', description: 'Hall rental only. Food is not included.' },
+  { value: 'plate', label: 'Per plate · venue included', description: 'Food billing with optional minimum guarantee or minimum spend. No separate hall rent.' },
   { value: 'combined', label: 'Venue + per plate', description: 'Hall rental plus catering for the billed plate count.' },
   { value: 'fixed', label: 'Fixed package', description: 'A single package price for the venue and listed inclusions.' },
 ];
@@ -27,7 +28,7 @@ export function normalizeFeatures(value = []) {
 }
 
 export const defaultPlans = [
-  { name: 'Your venue, your way', mode: 'venue', description: 'An elegant space for your celebration. Bring your own caterer and choose only the services you need.', minimumPlates: 0, fixedPrice: 0, vegRate: 0, jainRate: 0, nonVegRate: 0, mixedRate: 0, advancePercent: 30, taxRate: 0, status: 'Active' },
+  { name: 'Your venue, your way', mode: 'venue', description: 'An elegant space for your celebration. Choose the venue and only the services you need. Food is not included.', minimumPlates: 0, fixedPrice: 0, vegRate: 0, jainRate: 0, nonVegRate: 0, mixedRate: 0, advancePercent: 30, taxRate: 0, status: 'Active' },
   { name: 'Shubh Bhoj', mode: 'plate', description: 'Venue included with a welcome drink, 2 starters, 3 mains, dal, rice, breads, salad and 2 desserts. Menu subject to confirmation.', minimumPlates: 150, fixedPrice: 0, vegRate: 850, jainRate: 950, nonVegRate: 1150, mixedRate: 1050, advancePercent: 30, taxRate: 0, status: 'Active' },
   { name: 'Shaadi Celebration', mode: 'combined', description: 'Hall rental plus a premium catered menu. Add a mandap, baraat welcome or a live food counter to make it your own.', minimumPlates: 100, fixedPrice: 0, vegRate: 650, jainRate: 750, nonVegRate: 950, mixedRate: 850, advancePercent: 30, taxRate: 0, status: 'Active' },
   { name: 'Sagai & Sangeet', mode: 'fixed', description: 'Venue, basic stage décor, sound system and vegetarian dinner for up to 150 guests. Extra services are charged separately.', minimumPlates: 0, maxGuests: 150, fixedPrice: 175000, vegRate: 0, jainRate: 0, nonVegRate: 0, mixedRate: 0, advancePercent: 40, taxRate: 0, status: 'Active' },
@@ -66,18 +67,29 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
   const offered = menus.length ? menus.map(menu=>menu.plateType) : PLATE_TYPES;
   const guests = number(input.guests, 'Guest count', { min: 1, max: Number(hall.capacity), integer: true });
   if (plan.mode === 'fixed' && plan.maxGuests && guests > plan.maxGuests) throw Error(`This fixed package covers up to ${plan.maxGuests} guests. Choose a different plan or lower the guest count.`);
-  const venueRate = number(saved && previous?.hallId === hall.id ? saved.venueRate : hall.price, 'Venue rate');
-  const venueAmount = ['venue', 'combined'].includes(plan.mode) ? venueRate : 0;
-  const guaranteedPlates = perPlate ? number(input.guaranteedPlates, 'Guaranteed plates', { min: Math.max(1, Number(plan.minimumPlates || 1)), max: Number(hall.capacity), integer: true }) : 0;
-  const extraPlates = perPlate ? number(input.extraPlates ?? 0, 'Extra plates', { max: Number(hall.capacity), integer: true }) : 0;
-  const billedPlates = guaranteedPlates + extraPlates;
-  if (billedPlates > hall.capacity) throw Error(`Total billed plates cannot exceed the hall capacity of ${hall.capacity}.`);
+  const version = saved?.version===2 || isClient || input.pricingVersion===2 || (!saved && input.guaranteedPlates===undefined) ? 2 : 1;
+  const duration = bookingDuration(input);
+  const venueRates = saved && previous?.hallId===hall.id ? (saved.venueRates || {price:saved.venueRate}) : Object.fromEntries(['price','morningPrice','afternoonPrice','eveningPrice'].map(key=>[key,hall[key]??hall.price]));
+  const rule = (plan.eventRates||[]).find(rule=>rule.eventType===input.type)||{};
+  const configuredRental = rule.venueRate ?? plan.venueRate ?? venueRates[duration.rateKey] ?? venueRates.price;
+  const venueRate = number(configuredRental, 'Venue rate');
+  const venueAmount = ['venue', 'combined'].includes(plan.mode) ? round(venueRate * duration.rentalUnits) : 0;
+  if(perPlate && Number(plan.minimumPlates||0)>Number(hall.capacity))throw Error(`This model requires ${plan.minimumPlates} guaranteed guests, above this hall’s capacity of ${hall.capacity}. Choose a different hall or model.`);
+  const guaranteedPlates = perPlate ? number(input.guaranteedPlates ?? plan.minimumPlates ?? 0, 'Minimum guaranteed guests', { min: version===1?Math.max(1,Number(plan.minimumPlates||1)):Number(plan.minimumPlates||0), max: Number(hall.capacity), integer: true }) : 0;
+  const actualGuests = perPlate && version===2 && !isClient && input.actualGuests!==undefined && input.actualGuests!==null && input.actualGuests!=='' ? number(input.actualGuests,'Actual served guests',{max:Number(hall.capacity),integer:true}) : null;
+  const attendance = actualGuests ?? guests;
+  const extraPlates = perPlate ? version===2 ? Math.max(0,attendance-guaranteedPlates) : number(input.extraPlates ?? 0, 'Extra plates', { max: Number(hall.capacity), integer: true }) : 0;
+  const billedPlates = perPlate ? guaranteedPlates + extraPlates : 0;
+  if (billedPlates > hall.capacity) throw Error(`Billable plates cannot exceed the hall capacity of ${hall.capacity}.`);
   const plateType = perPlate ? input.plateType : plan.mode==='fixed'&&menus.length ? (input.plateType&&input.plateType!=='Not included'?input.plateType:menus[0].plateType) : 'Not included';
   if ((perPlate || plan.mode==='fixed'&&menus.length) && !offered.includes(plateType)) throw Error('Choose a meal type offered by this pricing model.');
   const selectedMenu = menus.find(menu=>menu.plateType===plateType) || null;
-  const plateRate = perPlate ? number(plan[RATE_KEYS[plateType]], 'Plate rate', { min: 1 }) : 0;
-  const cateringAmount = round(billedPlates * plateRate);
-  const packageAmount = plan.mode === 'fixed' ? number(plan.fixedPrice, 'Package price', { min: 1 }) : 0;
+  const plateRate = perPlate ? number(rule[RATE_KEYS[plateType]] ?? plan[RATE_KEYS[plateType]], 'Plate rate', { min: 1 }) : 0;
+  const foodBase = round(billedPlates * plateRate);
+  const minimumFoodValue = perPlate ? number(plan.minimumFoodValue ?? 0,'Minimum food billing') : 0;
+  const minimumFoodTopUp = perPlate ? round(Math.max(0,minimumFoodValue-foodBase)) : 0;
+  const cateringAmount = round(foodBase+minimumFoodTopUp);
+  const packageAmount = plan.mode === 'fixed' ? number(rule.fixedPrice ?? plan.fixedPrice, 'Package price', { min: 1 }) : 0;
   if (!Array.isArray(input.addOns ?? [])) throw Error('Choose valid add-on services.');
   if ((input.addOns || []).length > 30) throw Error('A booking can have at most 30 add-on services.');
   const used = new Set();
@@ -87,9 +99,10 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
     const snapshot = saved?.addonLines?.find(line => line.id === selection.id);
     const service = snapshot || addons.find(a => a.id === selection.id && a.status === 'Active');
     if (!service) throw Error('One of the selected add-ons is no longer available in your workspace.');
-    const quantity = number(selection.quantity, 'Add-on quantity', { min: 1, max: 10000, integer: true });
+    const quantityMode = version===2 && service.unit==='per guest' && selection.quantityMode==='guests' ? 'guests' : 'manual';
+    const quantity = quantityMode==='guests' ? attendance : number(selection.quantity, 'Add-on quantity', { min: 1, max: 10000, integer: true });
     const rate = number(snapshot ? snapshot.rate : service.price, 'Add-on rate');
-    return { id: service.id, name: service.name, unit: service.unit, rate, quantity, amount: round(rate * quantity), features: normalizeFeatures(service.features) };
+    return { id: service.id, name: service.name, unit: service.unit, rate, quantity, quantityMode, amount: round(rate * quantity), features: normalizeFeatures(service.features) };
   });
   const addonAmount = round(addonLines.reduce((sum, line) => sum + line.amount, 0));
   const subtotal = round(venueAmount + cateringAmount + packageAmount + addonAmount);
@@ -100,7 +113,7 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
   const total = round(taxableAmount + taxAmount);
   const advancePercent = number(isClient ? (plan.advancePercent ?? 30) : (input.advancePercent ?? plan.advancePercent ?? 30), 'Advance percentage', { max: 100 });
   return {
-    version: 1, plan: { ...plan, menus, features: normalizeFeatures(plan.features) }, menu: selectedMenu, venueRate, venueAmount, plateType, plateRate,
+    version, expectedGuests:guests, actualGuests, attendance, billingBasis:version===1?'legacy':actualGuests===null?'estimate':'actual', duration, venueRates, foodBase, minimumFoodValue, minimumFoodTopUp, eventType:input.type, plan: { ...plan, menus, features: normalizeFeatures(plan.features) }, menu: selectedMenu, venueRate, venueAmount, plateType, plateRate,
     guaranteedPlates, extraPlates, billedPlates, cateringAmount, packageAmount,
     addonLines, addonAmount, subtotal, discount, taxableAmount, taxRate, taxAmount,
     total, advancePercent, advanceAmount: round(total * advancePercent / 100),

@@ -1,0 +1,54 @@
+// Optional browser suite, same dependencies as readability-ui.mjs.
+import assert from 'node:assert/strict';
+import { chromium as pw } from 'playwright-core';
+import chromium from '@sparticuz/chromium';
+const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args,headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1050},reducedMotion:'reduce'}),errors=[],cleanup=[];
+page.on('pageerror',e=>errors.push(e.message));const root=process.env.UI_TEST_URL||'http://localhost:3000';
+async function add(kind,body){const r=await page.request.post(root+'/api/'+kind,{data:body});assert.equal(r.status(),201,await r.text());const data=await r.json();cleanup.push([kind,data.id]);return data;}
+const waitTotal=async total=>{await page.waitForFunction(total=>document.querySelector('.quote-total strong')?.textContent===total,total);};
+try{
+ await page.goto(root);await page.locator('#sidebar-toggle').waitFor();
+ const hall=await add('halls',{name:'Flow browser hall',price:50000,morningPrice:25000,type:'Indoor',capacity:500,status:'Available'});
+ const model=await add('pricing-models',{name:'Flow browser menu',mode:'combined',minimumPlates:100,minimumFoodValue:100000,vegRate:650,jainRate:700,nonVegRate:900,mixedRate:850,status:'Active',advancePercent:30,taxRate:0,eventRates:[{eventType:'Seminar',vegRate:800}]});
+ const service=await add('addons',{name:'Flow browser refreshments',category:'Catering',unit:'per guest',price:10,status:'Active'});
+ await page.reload();await page.getByRole('button',{name:'Create a booking',exact:true}).click();
+ await page.getByLabel('Event name',{exact:true}).fill('Browser unified flow');
+ await page.getByLabel('Event date',{exact:true}).fill('2027-01-20');
+ await page.getByLabel('Marriage hall',{exact:true}).selectOption(hall.id);
+ assert.equal(await page.getByLabel('Expected guests',{exact:true}).count(),1);
+ await page.getByLabel('Expected guests',{exact:true}).fill('150');
+ await page.getByRole('button',{name:'Morning 08:00–14:00',exact:true}).click();
+ await page.getByLabel('Pricing model',{exact:true}).selectOption(model.id);await waitTotal('₹1,25,000');
+ assert.equal(await page.getByLabel('Minimum guaranteed guests',{exact:true}).inputValue(),'100');
+ await page.getByLabel('Expected guests',{exact:true}).fill('180');await waitTotal('₹1,42,000');
+ await page.getByText('Choose or manage extras',{exact:false}).click();
+ await page.getByRole('checkbox',{name:'Add Flow browser refreshments',exact:true}).check();await waitTotal('₹1,43,800');
+ await page.getByLabel('Event type',{exact:true}).selectOption('Seminar');await waitTotal('₹1,70,800');
+ await page.getByRole('button',{name:'Multiple days Full days, inclusive',exact:true}).click();
+ await page.getByLabel('Last booked date (included)',{exact:true}).fill('2027-01-22');await waitTotal('₹2,95,800');
+ await page.getByText('Minimum guarantee & actual served (optional)',{exact:true}).click();
+ await page.getByLabel('Actual served guests',{exact:true}).fill('80');await waitTotal('₹2,50,800');
+ assert.match(await page.locator('.quote-basis').innerText(),/Actual served 80.*Minimum 100.*Billable 100/);
+ await page.getByLabel('Expected guests',{exact:true}).fill('200');await waitTotal('₹2,50,800');
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ assert.ok(await page.locator('.modal').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+ await page.locator('.quote-total').scrollIntoViewIfNeeded();
+ await page.screenshot({path:'/home/user/booking-flow-review-mobile.png'});
+ await page.getByRole('button',{name:'Create booking',exact:true}).click();
+ await page.locator('.modal').waitFor({state:'hidden'});
+ const data=await (await page.request.get(root+'/api/data')).json();let booking=data.bookings.find(b=>b.name==='Browser unified flow');assert.ok(booking);cleanup.push(['bookings',booking.id]);assert.equal(booking.total,250800);assert.equal(booking.quote.addonLines[0].quantity,80);assert.equal(booking.actualGuests,80);
+ const full=await (await page.request.get(root+`/api/bookings/${booking.id}/confirmation`)).text();assert.ok(full.includes('₹2,50,800.00'));assert.ok(full.includes('Minimum food bill adjustment'));assert.ok(full.includes('2027-01-23 00:00'));
+ // Edit via booking list and verify clearing actual served reuses current expected attendance.
+ await page.setViewportSize({width:1440,height:1050});
+ await page.getByRole('button',{name:'Bookings',exact:false}).first().click();
+ await page.getByLabel('Search bookings',{exact:true}).fill('Browser unified flow');
+ await page.getByRole('button',{name:'Edit Browser unified flow',exact:true}).click();
+ await page.getByText('Minimum guarantee & actual served (optional)',{exact:true}).click();
+ await page.getByLabel('Actual served guests',{exact:true}).fill('');await waitTotal('₹3,12,000');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.locator('.modal').waitFor({state:'hidden'});
+ booking=(await (await page.request.get(root+'/api/data')).json()).bookings.find(b=>b.id===booking.id);assert.equal(booking.total,312000);assert.equal(booking.actualGuests,null);assert.equal(booking.quote.addonLines[0].quantity,200);
+ assert.deepEqual(errors,[]);
+ console.log('PASS browser flow: one attendance field, synced model/MG/minimum-spend/event/duration/extras, actual override and clear, mobile layout, save/edit and print totals.');
+}finally{for(const [kind,id] of cleanup.reverse())await page.request.delete(root+'/api/'+kind+'/'+id);await browser.close();}

@@ -75,12 +75,12 @@ Use the account menu to switch demo roles, or the workspace selector to explore 
 - Staff manage bookings, clients, and payments, but cannot change halls or the team directory.
 - Clients see only their own bookings, profile contact, and related payments, and can request bookings. The server forces requests to Pending and uses the venue's price.
 - CRUD forms with validation, delete confirmations, optimistic deletion with rollback, success/error notifications, empty states, and loading indicators.
-- Venue capacity checks, whole-day booking conflict protection, maintenance checks, and payment overpayment protection.
+- Venue capacity checks, duration-aware booking conflict protection, maintenance checks, and payment overpayment protection.
 - Calendar, booking filters/search/pagination, client directory, payment history, CSV exports, business reports, and profile/workspace settings.
 - Seeded demo data: two organizations, three halls per organization, six clients, four staff directory entries, 36 bookings, and 36 payments per organization.
 - Persistent database: `data/gatherhall.sqlite`, excluded from Git. Initial demo fixtures are generated only when no tenant exists.
 
-The demo's dashboard/calendar date is fixed to September 28, 2026 for a coherent first-load experience. Events are treated as whole-day reservations; start times are informational.
+The demo's dashboard/calendar date is fixed to September 28, 2026 for a coherent first-load experience. Legacy events remain whole-day reservations. New bookings offer shift, full-day, multiple-day and custom durations; arrival/ceremony times do not extend the selected reservation.
 
 ## Tests
 
@@ -119,3 +119,9 @@ Optional visual regression checks: `tests/readability-ui.mjs` uses Playwright Co
 ### Sidebar navigation
 
 The top-left hamburger toggles the desktop sidebar and remembers that preference in the browser. On mobile it opens a temporary navigation drawer with a close button, backdrop dismissal and Escape support. Keyboard focus stays inside the open drawer and returns to the toggle on close; navigating or resizing back to desktop closes the mobile drawer. Optional browser coverage: `tests/sidebar-ui.mjs` (same setup as readability checks).
+
+## Simplified booking flow
+
+Bookings are organized as **Event & duration → Pricing & catering → Extras → Review**. Expected attendance is entered once; new bookings use guest-linked billing with optional actual served, minimum guarantee and minimum food spend. Per-guest extras can follow attendance automatically. Duration-aware availability, multi-day rental, event-specific rates and saved agreement protection use shared server/UI calculations. See [billing rules and limitations](docs/BOOKING-PACKAGES.md).
+
+`tests/booking-flow.mjs` covers representative Indian venue pricing cases, shift/multi-day conflicts, current payments and print totals. Optional `tests/booking-flow-ui.mjs` verifies the synchronized form on desktop and mobile.
