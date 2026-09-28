@@ -8,15 +8,33 @@ const owner=await login('owner'),staff=await login('staff'),client=await login('
 const all=(await request('/data','GET',null,owner)).data;
 assert.ok(all.bookings.length>=36);assert.equal(all.halls.length,3);
 const mine=(await request('/data','GET',null,client)).data;
+assert.equal((await request('/availability?date=2026-09-29')).status,401);
+assert.equal((await request('/availability?date=2026-02-30','GET',null,owner)).status,400);
+assert.equal((await request('/availability?date=bad-date','GET',null,owner)).status,400);
+const ownerAvailability=await request('/availability?date=2026-09-29','GET',null,owner);
+assert.equal(ownerAvailability.status,200);
+assert.equal(ownerAvailability.data.halls.find(h=>h.id==='t1h0').available,false);
+assert.ok(ownerAvailability.data.halls.every(h=>Object.keys(h).sort().join(',')==='available,id,reason'));
+const own=mine.bookings[0];
+assert.equal((await request(`/availability?date=${own.date}&exclude=${own.id}`,'GET',null,client)).data.halls.find(h=>h.id===own.hallId).available,true);
+const someoneElse=all.bookings.find(b=>b.clientId!==mine.clients[0].id&&b.status!=='Cancelled');
+assert.equal((await request(`/availability?date=${someoneElse.date}&exclude=${someoneElse.id}`,'GET',null,client)).data.halls.find(h=>h.id===someoneElse.hallId).available,false);
+
 assert.equal(mine.clients.length,1);assert.equal(mine.staff.length,0);assert.ok(mine.bookings.every(b=>b.clientId===mine.clients[0].id));assert.ok(mine.payments.every(p=>mine.bookings.some(b=>b.id===p.bookingId)));
 assert.equal((await request('/halls','POST',{name:'Forbidden'},staff)).status,403);
 assert.equal((await request('/payments','POST',{},client)).status,403);
 const other=(await request('/auth/login','POST',{email:'willow@gatherhall.demo',password:'Welcome123!'})).cookie;
 const otherData=(await request('/data','GET',null,other)).data;
 assert.ok(otherData.bookings.every(b=>!all.bookings.some(a=>a.id===b.id)));
+assert.ok((await request('/availability?date=2026-09-29','GET',null,other)).data.halls.every(h=>otherData.halls.some(x=>x.id===h.id)));
+
 assert.equal((await request('/bookings/'+all.bookings[0].id,'DELETE',null,other)).status,404);
 const hall=(await request('/halls','POST',{name:'API test hall',type:'Indoor',capacity:200,price:10000,status:'Available'},owner)).data;
 assert.ok(hall.id);
+await request('/halls/'+hall.id,'PUT',{...hall,status:'Maintenance'},owner);
+assert.equal((await request('/availability?date=2026-12-30','GET',null,owner)).data.halls.find(h=>h.id===hall.id).available,false);
+await request('/halls/'+hall.id,'PUT',hall,owner);
+
 const customer=(await request('/clients','POST',{name:'API test client',email:'test@example.com',phone:'9876543210',status:'Active'},owner)).data;
 assert.ok(customer.id);
 const draft={name:'API test celebration',hallId:hall.id,clientId:customer.id,date:'2026-12-30',time:'18:00',guests:100,type:'Wedding',status:'Confirmed',total:10000,notes:'Integration test'};
@@ -53,4 +71,4 @@ assert.equal((await request('/data','GET',null,accessLogin.cookie)).status,403);
 assert.equal((await request('/auth/login','POST',{email:'access-test@example.com',password:'Testing123!'})).status,403);
 await request('/clients/'+accessContact.id,'DELETE',null,owner);
 assert.equal((await request('/data','GET',null,accessLogin.cookie)).status,401);
-console.log('PASS: authentication, tenant isolation, client ownership, role permissions, full CRUD, booking conflicts, capacity, payment balance, account provisioning, account deactivation/deletion, and logout.');
+console.log('PASS: authentication, tenant isolation, client ownership, role permissions, full CRUD, private availability checks, booking conflicts, capacity, payment balance, account provisioning, account deactivation/deletion, and logout.');

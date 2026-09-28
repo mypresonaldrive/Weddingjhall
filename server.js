@@ -48,6 +48,18 @@ app.use('/api',(req,res,next)=>{const u=db.prepare('SELECT users.* FROM users JO
 app.get('/api/auth/me',(req,res)=>res.json(publicUser(req.user)));
 const list=(tenant,kind)=>db.prepare('SELECT * FROM records WHERE tenant=? AND kind=?').all(tenant,kind).map(r=>({...JSON.parse(r.body),id:r.id}));
 function visible(req,kind){let rows=list(req.user.tenant,kind);if(req.user.role==='client'){const access=db.prepare('SELECT client_id FROM client_access WHERE user_id=?').get(req.user.id);const cs=access?[access.client_id]:[];const bs=list(req.user.tenant,'bookings').filter(b=>cs.includes(b.clientId));if(kind==='clients')rows=rows.filter(c=>cs.includes(c.id));if(kind==='bookings')rows=bs;if(kind==='payments')rows=rows.filter(p=>bs.some(b=>b.id===p.bookingId));if(kind==='staff')rows=[];}return rows;}
+app.get('/api/availability', (req, res) => {
+ const { date, exclude } = req.query;
+ if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) return res.status(400).json({ error: 'Choose a valid event date.' });
+ const ownBooking = exclude && visible(req, 'bookings').some(b => b.id === exclude);
+ const bookings = list(req.user.tenant, 'bookings');
+ const halls = list(req.user.tenant, 'halls').map(hall => {
+  const conflict = bookings.some(b => b.date === date && b.hallId === hall.id && b.status !== 'Cancelled' && !(ownBooking && b.id === exclude));
+  const maintenance = hall.status === 'Maintenance';
+  return { id: hall.id, available: !conflict && !maintenance, reason: maintenance ? 'Venue is under maintenance' : conflict ? 'Already reserved on this date' : 'Available for your celebration' };
+ });
+ res.set('Cache-Control', 'no-store').json({ date, halls });
+});
 app.get('/api/data',(req,res)=>res.json(Object.fromEntries(['halls','bookings','clients','payments','staff'].map(k=>[k,visible(req,k)]))));
 const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
 function access(req,res,next){const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff'].includes(kind))return res.status(403).json({error:'Only owners can manage halls and staff.'});next();}

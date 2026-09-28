@@ -18,6 +18,17 @@ npm run build
 npm start
 ```
 
+## Light lavender UI & booking improvements
+
+The light theme uses the supplied Lavender Lilt palette: `#D3D3FF`, `#9999CC`, `#575799`, and `#090933`. The sidebar and cards remain white, with lavender selection states and navy text. Amber, green, and red are retained for meaningful status feedback.
+
+- Combine event/client search, venue, payment status, and date-range filters. Sort by upcoming events, earliest/latest date, booking value, or balance due; export the filtered results.
+- Check venue availability as the event date changes. Conflict warnings suggest available alternatives and update venue pricing when selected. Guest-capacity feedback appears before submission.
+- The availability API is tenant-scoped, never reveals another client's event details, and only allows excluding a booking the requester can already access. The save endpoint rechecks conflicts.
+- Record payments directly from booking rows or the booking editor, with the remaining balance prefilled. Partial payments update the booking's paid amount immediately.
+- Add a booking from a calendar day with the date prefilled.
+- Responsive filter controls, keyboard focus containment in dialogs, screen-reader status announcements, and fixed dialog actions improve mobile and keyboard usability.
+
 ## Docker / Coolify
 
 A multi-stage Dockerfile, non-root runtime, configurable port, health check, and local Compose setup are included.
@@ -66,7 +77,7 @@ With the server running:
 npm test
 ```
 
-The API integration suite verifies authentication, session revocation, tenant isolation, stable client ownership, role permissions, CRUD, double-booking prevention, capacity, and payment balances. Test records are removed on successful completion.
+The API integration suite verifies authentication, session revocation, tenant isolation, stable client ownership, role permissions, CRUD, privacy-safe availability checks, double-booking prevention, capacity, and payment balances. Test records are removed on successful completion.
 
 ## Deployment considerations
 
