@@ -29,6 +29,18 @@ The light theme uses the supplied Lavender Lilt palette: `#D3D3FF`, `#9999CC`, `
 - Add a booking from a calendar day with the date prefilled.
 - Responsive filter controls, keyboard focus containment in dialogs, screen-reader status announcements, and fixed dialog actions improve mobile and keyboard usability.
 
+## Packages, catering & extra services
+
+- **Packages & add-ons**: tenant-specific catalogs with owner-managed pricing, descriptions and active/inactive status.
+- **Four booking models**: venue only, per plate with venue included, venue plus catering, and a fixed package.
+- **Four meal types**: vegetarian, Jain/no onion-garlic, non-vegetarian and mixed menu, with minimum guarantees and extra plate counts.
+- **Quantity-based extras**: mandap/stage décor, baraat welcome, DJ, live food counters, guest rooms, power backup, photography and parking support; add custom services as needed.
+- **Itemized estimates**: discounts, configurable tax, advance targets and outstanding balances; server-calculated totals and snapshots preserve agreed rates.
+- **Event coordination**: tilak, roka, haldi, mehendi, sangeet and other event types; baraat/muhurat timings, family contact details, dietary preferences and private operations notes.
+- **Saved estimate downloads** for staff and the owning client. Existing manual bookings remain supported.
+
+See [the package and pricing guide](docs/BOOKING-PACKAGES.md) for billing rules, limitations and examples. Reference rates are editable examples, not guaranteed vendor offers. Add-ons are charge lines, not inventory reservations; estimates are not statutory tax invoices.
+
 ## Docker / Coolify
 
 A multi-stage Dockerfile, non-root runtime, configurable port, health check, and local Compose setup are included.

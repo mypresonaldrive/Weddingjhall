@@ -51,12 +51,26 @@ try {
   env: { ...process.env, TEST_URL: base + '/api' },
  });
  console.log(stdout.trim());
+ const packages = await run(process.execPath, ['tests/packages.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });
+ console.log(packages.stdout.trim());
  const login = await fetch(base + '/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'owner@gatherhall.demo', password: 'Welcome123!' }),
  });
  const cookie = login.headers.get('set-cookie').split(';')[0];
  const read = () => fetch(base + '/api/data', { headers: { Cookie: cookie } }).then(r => r.json());
+ const registered = await fetch(base + '/api/auth/register', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'New owner', organization: 'Fresh venue', email: 'new-owner@example.com', password: 'Testing123!' }),
+ });
+ assert.equal(registered.status, 200);
+ const newLogin = await fetch(base + '/api/auth/login', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'new-owner@example.com', password: 'Testing123!' }),
+ });
+ const newCookie = newLogin.headers.get('set-cookie').split(';')[0];
+ const newData = await (await fetch(base + '/api/data', { headers: { Cookie: newCookie } })).json();
+ assert.equal(newData.plans.length, 4); assert.equal(newData.addons.length, 8); assert.equal(newData.bookings.length, 0);
  const before = await read();
  await stop();
  await start();

@@ -6,7 +6,7 @@
     "dev": "node server.js",
     "build": "vite build",
     "start": "NODE_ENV=production node server.js",
-    "test": "node tests/api.mjs",
+    "test": "node tests/api.mjs && node tests/packages.mjs",
     "test:deployment": "npm run build && node tests/deployment.mjs"
   },
   "dependencies": {

@@ -5,13 +5,14 @@ import cookieParser from 'cookie-parser';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { defaultPlans, defaultAddons, EVENT_TYPES, PLAN_MODES, ADDON_UNITS, ADDON_CATEGORIES, priceBooking, number } from './shared/booking-pricing.js';
 
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer between 1 and 65535.');
 const dataDir = path.resolve(process.env.DATA_DIR || 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(path.join(dataDir, 'gatherhall.sqlite'));
-db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS tenants(id TEXT PRIMARY KEY,name TEXT); CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,tenant TEXT,name TEXT,email TEXT UNIQUE,password TEXT,role TEXT); CREATE TABLE IF NOT EXISTS account_links(record_id TEXT PRIMARY KEY,user_id TEXT); CREATE TABLE IF NOT EXISTS client_access(user_id TEXT PRIMARY KEY,client_id TEXT); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT,expires INTEGER); CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY,tenant TEXT,kind TEXT,body TEXT);`);
+db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS tenants(id TEXT PRIMARY KEY,name TEXT); CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,tenant TEXT,name TEXT,email TEXT UNIQUE,password TEXT,role TEXT); CREATE TABLE IF NOT EXISTS account_links(record_id TEXT PRIMARY KEY,user_id TEXT); CREATE TABLE IF NOT EXISTS client_access(user_id TEXT PRIMARY KEY,client_id TEXT); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT,expires INTEGER); CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY,tenant TEXT,kind TEXT,body TEXT); CREATE TABLE IF NOT EXISTS catalog_initialized(tenant TEXT PRIMARY KEY);`);
 const put=(id,tenant,kind,body)=>db.prepare('INSERT INTO records VALUES(?,?,?,?)').run(id,tenant,kind,JSON.stringify(body));
 if(!db.prepare('SELECT id FROM tenants LIMIT 1').get()){
  for(const [tid,name] of [['t1','The Grand Estate'],['t2','Willow & Co. Venues']]){
@@ -31,6 +32,17 @@ if(!db.prepare('SELECT id FROM tenants LIMIT 1').get()){
  }
 }
 for(const tid of ['t1','t2']){db.prepare('INSERT OR IGNORE INTO client_access VALUES(?,?)').run(tid+'client',tid+'c0');db.prepare('INSERT OR IGNORE INTO account_links VALUES(?,?)').run(tid+'c0',tid+'client');db.prepare('INSERT OR IGNORE INTO account_links VALUES(?,?)').run(tid+'s0',tid+'staff');}
+function seedCatalog(tenant) {
+ if (db.prepare('SELECT tenant FROM catalog_initialized WHERE tenant=?').get(tenant)) return;
+ db.exec('BEGIN');
+ try {
+  defaultPlans.forEach((p,i) => put(tenant+'-plan-'+i, tenant, 'plans', p));
+  defaultAddons.forEach((a,i) => put(tenant+'-addon-'+i, tenant, 'addons', a));
+  db.prepare('INSERT INTO catalog_initialized VALUES(?)').run(tenant);
+  db.exec('COMMIT');
+ } catch(error) { db.exec('ROLLBACK'); throw error; }
+}
+for (const tenant of db.prepare('SELECT id FROM tenants').all()) seedCatalog(tenant.id);
 const app=express();
 app.disable('x-powered-by');
 // Public, lightweight readiness endpoint for Docker and Coolify.
@@ -42,12 +54,12 @@ app.get('/healthz', (_req, res) => {
 app.use(express.json());app.use(cookieParser());
 const publicUser=u=>({id:u.id,name:u.name,email:u.email,role:u.role,tenantId:u.tenant,tenant:db.prepare('SELECT name FROM tenants WHERE id=?').get(u.tenant).name});
 app.post('/api/auth/login',(req,res)=>{const u=db.prepare('SELECT * FROM users WHERE email=?').get(String(req.body.email||'').toLowerCase());if(!u||!bcrypt.compareSync(req.body.password||'',u.password))return res.status(401).json({error:'Email or password is incorrect.'});const linked=db.prepare('SELECT body FROM records JOIN account_links ON records.id=account_links.record_id WHERE account_links.user_id=?').get(u.id);if(linked&&JSON.parse(linked.body).status==='Inactive')return res.status(403).json({error:'This account is inactive. Contact your workspace owner.'});const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(token,u.id,Date.now()+604800000);res.cookie('session',token,{httpOnly:true,sameSite:'lax',maxAge:604800000});res.json(publicUser(u));});
-app.post('/api/auth/register',(req,res)=>{const {name,email,password,organization}=req.body;if(!name||!organization||!email?.includes('@')||password?.length<8)return res.status(400).json({error:'Complete all fields and use a password with at least 8 characters.'});if(db.prepare('SELECT id FROM users WHERE email=?').get(email.toLowerCase()))return res.status(409).json({error:'This email is already registered.'});const tid=randomBytes(8).toString('hex'),id=randomBytes(8).toString('hex');db.prepare('INSERT INTO tenants VALUES(?,?)').run(tid,organization);db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?)').run(id,tid,name,email.toLowerCase(),bcrypt.hashSync(password,10),'owner');res.json({success:true});});
+app.post('/api/auth/register',(req,res)=>{const {name,email,password,organization}=req.body;if(!name||!organization||!email?.includes('@')||password?.length<8)return res.status(400).json({error:'Complete all fields and use a password with at least 8 characters.'});if(db.prepare('SELECT id FROM users WHERE email=?').get(email.toLowerCase()))return res.status(409).json({error:'This email is already registered.'});const tid=randomBytes(8).toString('hex'),id=randomBytes(8).toString('hex');db.prepare('INSERT INTO tenants VALUES(?,?)').run(tid,organization);db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?)').run(id,tid,name,email.toLowerCase(),bcrypt.hashSync(password,10),'owner');seedCatalog(tid);res.json({success:true});});
 app.post('/api/auth/logout',(req,res)=>{db.prepare('DELETE FROM sessions WHERE token=?').run(req.cookies.session||'');res.clearCookie('session').json({success:true});});
 app.use('/api',(req,res,next)=>{const u=db.prepare('SELECT users.* FROM users JOIN sessions ON users.id=sessions.user_id WHERE token=? AND expires>?').get(req.cookies.session||'',Date.now());if(!u)return res.status(401).json({error:'Please sign in to continue.'});const linked=db.prepare('SELECT body FROM records JOIN account_links ON records.id=account_links.record_id WHERE account_links.user_id=?').get(u.id);if(linked&&JSON.parse(linked.body).status==='Inactive')return res.status(403).json({error:'This account is inactive. Contact your workspace owner.'});req.user=u;next();});
 app.get('/api/auth/me',(req,res)=>res.json(publicUser(req.user)));
 const list=(tenant,kind)=>db.prepare('SELECT * FROM records WHERE tenant=? AND kind=?').all(tenant,kind).map(r=>({...JSON.parse(r.body),id:r.id}));
-function visible(req,kind){let rows=list(req.user.tenant,kind);if(req.user.role==='client'){const access=db.prepare('SELECT client_id FROM client_access WHERE user_id=?').get(req.user.id);const cs=access?[access.client_id]:[];const bs=list(req.user.tenant,'bookings').filter(b=>cs.includes(b.clientId));if(kind==='clients')rows=rows.filter(c=>cs.includes(c.id));if(kind==='bookings')rows=bs;if(kind==='payments')rows=rows.filter(p=>bs.some(b=>b.id===p.bookingId));if(kind==='staff')rows=[];}return rows;}
+function visible(req,kind){let rows=list(req.user.tenant,kind);if(req.user.role==='client'){const access=db.prepare('SELECT client_id FROM client_access WHERE user_id=?').get(req.user.id);const cs=access?[access.client_id]:[];const bs=list(req.user.tenant,'bookings').filter(b=>cs.includes(b.clientId));if(kind==='clients')rows=rows.filter(c=>cs.includes(c.id));if(kind==='bookings')rows=bs.map(({operationsNotes,...b})=>b);if(kind==='payments')rows=rows.filter(p=>bs.some(b=>b.id===p.bookingId));if(kind==='staff')rows=[];if(['plans','addons'].includes(kind))rows=rows.filter(r=>r.status==='Active');}return rows;}
 app.get('/api/availability', (req, res) => {
  const { date, exclude } = req.query;
  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) return res.status(400).json({ error: 'Choose a valid event date.' });
@@ -60,12 +72,43 @@ app.get('/api/availability', (req, res) => {
  });
  res.set('Cache-Control', 'no-store').json({ date, halls });
 });
-app.get('/api/data',(req,res)=>res.json(Object.fromEntries(['halls','bookings','clients','payments','staff'].map(k=>[k,visible(req,k)]))));
-const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
-function access(req,res,next){const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff'].includes(kind))return res.status(403).json({error:'Only owners can manage halls and staff.'});next();}
-function validate(req,body,id){const kind=req.params.kind;const data=Object.fromEntries(fields[kind].filter(k=>body[k]!==undefined).map(k=>[k,body[k]]));for(const k of ['name','email','phone','description','notes','position'])if(data[k]!==undefined)data[k]=String(data[k]).trim().slice(0,2000);
+app.get('/api/data',(req,res)=>res.json(Object.fromEntries(['halls','bookings','clients','payments','staff','plans','addons'].map(k=>[k,visible(req,k)]))));
+const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes','planId','plateType','guaranteedPlates','extraPlates','addOns','discount','taxRate','advancePercent','baraatTime','muhuratTime','endTime','familyContact','familyPhone','menuNotes','operationsNotes'],plans:['name','description','mode','minimumPlates','maxGuests','fixedPrice','vegRate','jainRate','nonVegRate','mixedRate','advancePercent','taxRate','status'],addons:['name','description','category','price','unit','status'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
+function access(req,res,next){const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff','plans','addons'].includes(kind))return res.status(403).json({error:'Only owners can manage halls, staff, plans and add-ons.'});next();}
+function validate(req,body,id){const kind=req.params.kind;const data=Object.fromEntries(fields[kind].filter(k=>body[k]!==undefined).map(k=>[k,body[k]]));for(const k of ['name','email','phone','description','notes','position','familyContact','familyPhone','menuNotes','operationsNotes'])if(data[k]!==undefined)data[k]=String(data[k]).trim().slice(0,2000);
  if(kind==='bookings'){
- const hall=list(req.user.tenant,'halls').find(h=>h.id===data.hallId);const client=visible(req,'clients').find(c=>c.id===data.clientId);if(!hall||!client)throw Error('Select a valid hall and client.');if(hall.status==='Maintenance'&&!id)throw Error('This hall is under maintenance. Please choose an available hall.');if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date)||isNaN(Date.parse(data.date)))throw Error('Enter a valid event date.');if(!data.name||!data.time)throw Error('Event name and time are required.');if(!Number.isFinite(+data.guests)||+data.guests<1||+data.guests>hall.capacity)throw Error(`Guest count must be between 1 and ${hall.capacity}.`);if(list(req.user.tenant,'bookings').some(b=>b.id!==id&&b.hallId===hall.id&&b.date===data.date&&b.status!=='Cancelled'))throw Error('This hall is already booked on that date. Please choose another hall or date.');data.hall=hall.name;data.client=client.name;if(req.user.role==='client'){data.status='Pending';data.total=hall.price;}if(!['Confirmed','Pending','Completed','Cancelled'].includes(data.status))throw Error('Choose a valid booking status.');
+ const hall=list(req.user.tenant,'halls').find(h=>h.id===data.hallId);const client=visible(req,'clients').find(c=>c.id===data.clientId);if(!hall||!client)throw Error('Select a valid hall and client.');if(hall.status==='Maintenance'&&!id)throw Error('This hall is under maintenance. Please choose an available hall.');if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date)||isNaN(Date.parse(data.date))||new Date(data.date).toISOString().slice(0,10)!==data.date)throw Error('Enter a valid event date.');if(!data.name||!data.time)throw Error('Event name and time are required.');if(!Number.isFinite(+data.guests)||+data.guests<1||+data.guests>hall.capacity)throw Error(`Guest count must be between 1 and ${hall.capacity}.`);if(list(req.user.tenant,'bookings').some(b=>b.id!==id&&b.hallId===hall.id&&b.date===data.date&&b.status!=='Cancelled'))throw Error('This hall is already booked on that date. Please choose another hall or date.');data.hall=hall.name;data.client=client.name;if(req.user.role==='client'){data.status='Pending';data.total=hall.price;}if(!['Confirmed','Pending','Completed','Cancelled'].includes(data.status))throw Error('Choose a valid booking status.');
+ const previous = id ? list(req.user.tenant, 'bookings').find(b => b.id === id) : undefined;
+ if (previous?.planId && !data.planId) throw Error('Choose a plan for this packaged booking. Saved package pricing cannot be removed.');
+ if(!data.planId && (data.addOns||[]).length) throw Error('Choose a booking plan before adding catering or extra services.');
+ if(data.planId){
+  if(!EVENT_TYPES.includes(data.type) && !['Engagement','Corporate event'].includes(data.type)) throw Error('Choose a valid event type.');
+  const quote=priceBooking(data,{plans:list(req.user.tenant,'plans'),addons:list(req.user.tenant,'addons'),hall,previous,isClient:req.user.role==='client'});
+  data.quote=quote;data.total=quote.total;data.plateType=quote.plateType;data.guaranteedPlates=quote.guaranteedPlates;data.extraPlates=quote.extraPlates;
+  data.addOns=quote.addonLines.map(line=>({id:line.id,quantity:line.quantity}));data.discount=quote.discount;data.taxRate=quote.taxRate;data.advancePercent=quote.advancePercent;
+ }
+ for(const key of ['time','baraatTime','muhuratTime','endTime'])if(data[key]&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(data[key]))throw Error('Enter valid ceremony times.');
+ if(req.user.role==='client')data.operationsNotes='';
+ const paid=list(req.user.tenant,'payments').filter(p=>p.bookingId===id).reduce((sum,p)=>sum+p.amount,0);
+ if(Number(data.total)<paid)throw Error('Booking total cannot be lower than payments already received. Adjust payments before reducing the quote.');
+
+ }
+ if(['plans','addons'].includes(kind)){
+  if(!data.name||data.name.length>120)throw Error('Enter a name of up to 120 characters.');
+  if(!['Active','Inactive'].includes(data.status))throw Error('Choose a valid catalog status.');
+  if(kind==='plans'){
+   if(!PLAN_MODES.some(m=>m.value===data.mode))throw Error('Choose a valid pricing mode.');
+   for(const k of ['minimumPlates','maxGuests'])data[k]=number(data[k]??0,k,{max:10000,integer:true});
+   for(const k of ['fixedPrice','vegRate','jainRate','nonVegRate','mixedRate'])data[k]=number(data[k]??0,k);
+   data.advancePercent=number(data.advancePercent??30,'Advance percentage',{max:100});
+   data.taxRate=number(data.taxRate??0,'Tax rate',{max:28});
+   if(['plate','combined'].includes(data.mode)&&data.minimumPlates<1)throw Error('Per-plate plans require at least one guaranteed plate.');
+   if(['plate','combined'].includes(data.mode)&&['vegRate','jainRate','nonVegRate','mixedRate'].some(k=>data[k]<=0))throw Error('Set a positive price for each plate type.');
+   if(data.mode==='fixed'&&(!data.fixedPrice||!data.maxGuests))throw Error('Set a fixed package price and included guest limit.');
+  }else{
+   data.price=number(data.price,'Service rate');
+   if(!ADDON_UNITS.includes(data.unit)||!ADDON_CATEGORIES.includes(data.category))throw Error('Choose a valid service category and billing unit.');
+  }
  }
  if(['clients','staff','halls'].includes(kind)&&!data.name)throw Error('Name is required.');
  for(const k of ['capacity','price','total','guests','amount'])if(data[k]!==undefined){data[k]=Number(data[k]);if(!Number.isFinite(data[k])||data[k]<0)throw Error(`${k} must be a positive number.`);}

@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY index.html ./
 COPY src ./src
+COPY shared ./shared
 COPY public ./public
 RUN npm run build
 
@@ -19,6 +20,7 @@ RUN npm ci --omit=dev && npm cache clean --force \
     && mkdir -p /app/data && chown node:node /app/data
 COPY --from=build /app/dist ./dist
 COPY server.js ./
+COPY shared ./shared
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
