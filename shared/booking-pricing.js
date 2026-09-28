@@ -1,3 +1,4 @@
+import { normalizeMenus, sampleMenus } from './food-menus.js';
 export const EVENT_TYPES = ['Wedding', 'Reception', 'Engagement / Sagai', 'Tilak', 'Roka', 'Haldi', 'Mehendi', 'Sangeet', 'Anniversary', 'Mundan', 'Janeu / Upanayan', 'Birthday', 'Corporate event', 'Other'];
 export const PLATE_TYPES = ['Vegetarian', 'Jain / No onion-garlic', 'Non-vegetarian', 'Mixed menu'];
 export const PLAN_MODES = [
@@ -12,11 +13,11 @@ export const ADDON_CATEGORIES = ['Decoration', 'Catering', 'Entertainment', 'Acc
 export const MAX_SERVICE_FEATURES = 20;
 export const MAX_FEATURE_LENGTH = 160;
 export function normalizeFeatures(value = []) {
-  if (!Array.isArray(value)) throw Error('Service inclusions must be a list of text items.');
-  if (value.length > MAX_SERVICE_FEATURES) throw Error(`Add up to ${MAX_SERVICE_FEATURES} service inclusions.`);
+  if (!Array.isArray(value)) throw Error('Inclusions must be a list of text items.');
+  if (value.length > MAX_SERVICE_FEATURES) throw Error(`Add up to ${MAX_SERVICE_FEATURES} inclusions.`);
   const seen = new Set();
   return value.reduce((result, feature) => {
-    if (typeof feature !== 'string') throw Error('Each service inclusion must be text.');
+    if (typeof feature !== 'string') throw Error('Each inclusion must be text.');
     const text = feature.replace(/\s+/g, ' ').trim();
     if (text.length > MAX_FEATURE_LENGTH) throw Error(`Each inclusion must be ${MAX_FEATURE_LENGTH} characters or fewer.`);
     const key = text.toLocaleLowerCase('en-IN');
@@ -30,7 +31,7 @@ export const defaultPlans = [
   { name: 'Shubh Bhoj', mode: 'plate', description: 'Venue included with a welcome drink, 2 starters, 3 mains, dal, rice, breads, salad and 2 desserts. Menu subject to confirmation.', minimumPlates: 150, fixedPrice: 0, vegRate: 850, jainRate: 950, nonVegRate: 1150, mixedRate: 1050, advancePercent: 30, taxRate: 0, status: 'Active' },
   { name: 'Shaadi Celebration', mode: 'combined', description: 'Hall rental plus a premium catered menu. Add a mandap, baraat welcome or a live food counter to make it your own.', minimumPlates: 100, fixedPrice: 0, vegRate: 650, jainRate: 750, nonVegRate: 950, mixedRate: 850, advancePercent: 30, taxRate: 0, status: 'Active' },
   { name: 'Sagai & Sangeet', mode: 'fixed', description: 'Venue, basic stage décor, sound system and vegetarian dinner for up to 150 guests. Extra services are charged separately.', minimumPlates: 0, maxGuests: 150, fixedPrice: 175000, vegRate: 0, jainRate: 0, nonVegRate: 0, mixedRate: 0, advancePercent: 40, taxRate: 0, status: 'Active' },
-];
+].map((plan,index) => ({...plan, menus: index===0?[]:index===3?[sampleMenus[0]]:sampleMenus, terms:''}));
 export const defaultAddons = [
   { name: 'Mandap & stage decoration', category: 'Decoration', price: 35000, unit: 'per event', description: 'Floral mandap, stage backdrop and entrance styling.' },
   { name: 'Baraat welcome', category: 'Guest services', price: 8500, unit: 'per event', description: 'Welcome refreshments, garlands and guest coordination.' },
@@ -61,6 +62,8 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
   if (!plan) throw Error('This booking plan is not available in your workspace.');
   if (!PLAN_MODES.some(m => m.value === plan.mode)) throw Error('The selected plan has an invalid pricing mode.');
   const perPlate = ['plate', 'combined'].includes(plan.mode);
+  const menus = normalizeMenus(plan.menus);
+  const offered = menus.length ? menus.map(menu=>menu.plateType) : PLATE_TYPES;
   const guests = number(input.guests, 'Guest count', { min: 1, max: Number(hall.capacity), integer: true });
   if (plan.mode === 'fixed' && plan.maxGuests && guests > plan.maxGuests) throw Error(`This fixed package covers up to ${plan.maxGuests} guests. Choose a different plan or lower the guest count.`);
   const venueRate = number(saved && previous?.hallId === hall.id ? saved.venueRate : hall.price, 'Venue rate');
@@ -69,8 +72,9 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
   const extraPlates = perPlate ? number(input.extraPlates ?? 0, 'Extra plates', { max: Number(hall.capacity), integer: true }) : 0;
   const billedPlates = guaranteedPlates + extraPlates;
   if (billedPlates > hall.capacity) throw Error(`Total billed plates cannot exceed the hall capacity of ${hall.capacity}.`);
-  const plateType = perPlate ? input.plateType : 'Not included';
-  if (perPlate && !PLATE_TYPES.includes(plateType)) throw Error('Choose a valid plate type.');
+  const plateType = perPlate ? input.plateType : plan.mode==='fixed'&&menus.length ? (input.plateType&&input.plateType!=='Not included'?input.plateType:menus[0].plateType) : 'Not included';
+  if ((perPlate || plan.mode==='fixed'&&menus.length) && !offered.includes(plateType)) throw Error('Choose a meal type offered by this pricing model.');
+  const selectedMenu = menus.find(menu=>menu.plateType===plateType) || null;
   const plateRate = perPlate ? number(plan[RATE_KEYS[plateType]], 'Plate rate', { min: 1 }) : 0;
   const cateringAmount = round(billedPlates * plateRate);
   const packageAmount = plan.mode === 'fixed' ? number(plan.fixedPrice, 'Package price', { min: 1 }) : 0;
@@ -96,7 +100,7 @@ export function priceBooking(input, { plans = [], addons = [], hall, previous, i
   const total = round(taxableAmount + taxAmount);
   const advancePercent = number(isClient ? (plan.advancePercent ?? 30) : (input.advancePercent ?? plan.advancePercent ?? 30), 'Advance percentage', { max: 100 });
   return {
-    version: 1, plan: { ...plan }, venueRate, venueAmount, plateType, plateRate,
+    version: 1, plan: { ...plan, menus, features: normalizeFeatures(plan.features) }, menu: selectedMenu, venueRate, venueAmount, plateType, plateRate,
     guaranteedPlates, extraPlates, billedPlates, cateringAmount, packageAmount,
     addonLines, addonAmount, subtotal, discount, taxableAmount, taxRate, taxAmount,
     total, advancePercent, advanceAmount: round(total * advancePercent / 100),

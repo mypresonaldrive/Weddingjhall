@@ -14,7 +14,11 @@ try {
  assert.equal((await request('/addons','POST',{},client)).status,403);
  const hall=await add('halls',{name:'Package test hall',type:'Indoor',capacity:300,price:10000,status:'Available'});
  const person=initial.clients[0];
- const plan=await add('plans',{name:'Test combined plan',mode:'combined',minimumPlates:100,vegRate:100,jainRate:120,nonVegRate:150,mixedRate:140,fixedPrice:0,advancePercent:40,taxRate:5,status:'Active',description:'Menu and hall rental'});
+ const plan=await add('plans',{name:'Test combined plan',mode:'combined',minimumPlates:100,vegRate:100,jainRate:120,nonVegRate:150,mixedRate:140,fixedPrice:0,advancePercent:40,taxRate:5,status:'Active',description:'Menu and hall rental',features:[' Venue rental ','Welcome drinks','venue RENTAL','   ']});
+ assert.deepEqual(plan.features,['Venue rental','Welcome drinks']);
+ for(const features of ['invalid',null,[false],['x'.repeat(161)],Array(21).fill('One')])assert.equal((await request('/plans','POST',{...plan,features},owner)).status,400);
+ const planWithoutFeatures={...plan};delete planWithoutFeatures.features;assert.deepEqual((await modify('plans',planWithoutFeatures)).features,plan.features);
+
  const addon=await add('addons',{name:'Test rooms',category:'Accommodation',price:1000,unit:'per room-night',description:'Room nights',status:'Active',features:['  Fresh linen  ','Air conditioning','fresh LINEN','  ','Daily   housekeeping']});
  assert.deepEqual(addon.features,['Fresh linen','Air conditioning','Daily housekeeping']);
  assert.equal((await request('/addons/'+addon.id,'PUT',{...addon,features:['Staff edit']},staff)).status,403);
@@ -29,15 +33,16 @@ try {
  assert.equal((await request('/addons','POST',{...addon,unit:'bad'},owner)).status,400);
  const draft={name:'Package test celebration',clientId:person.id,hallId:hall.id,date:'2026-12-16',time:'18:00',guests:150,type:'Tilak',status:'Confirmed',planId:plan.id,plateType:'Jain / No onion-garlic',guaranteedPlates:100,extraPlates:20,addOns:[{id:addon.id,quantity:2,rate:1,features:['Client forged feature']}],discount:400,taxRate:5,advancePercent:40,total:1,quote:{total:1},baraatTime:'19:00',muhuratTime:'22:00',endTime:'23:30',familyContact:'Family coordinator',familyPhone:'9876543210',menuNotes:'No onion or garlic',operationsNotes:'Internal vendor instruction'};
  let booking=await add('bookings',draft);
- assert.equal(booking.total,27300);assert.equal(booking.quote.venueAmount,10000);assert.equal(booking.quote.cateringAmount,14400);assert.equal(booking.quote.addonAmount,2000);assert.equal(booking.quote.taxAmount,1300);assert.equal(booking.quote.advanceAmount,10920);assert.equal(booking.quote.plateRate,120);assert.equal(booking.quote.addonLines[0].rate,1000);assert.equal(booking.baraatTime,'19:00');assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
- const legacySnapshot=structuredClone(booking);delete legacySnapshot.quote.addonLines[0].features;
+ assert.equal(booking.total,27300);assert.equal(booking.quote.venueAmount,10000);assert.equal(booking.quote.cateringAmount,14400);assert.equal(booking.quote.addonAmount,2000);assert.equal(booking.quote.taxAmount,1300);assert.equal(booking.quote.advanceAmount,10920);assert.equal(booking.quote.plateRate,120);assert.equal(booking.quote.addonLines[0].rate,1000);assert.equal(booking.baraatTime,'19:00');assert.deepEqual(booking.quote.plan.features,plan.features);assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
+ const legacySnapshot=structuredClone(booking);delete legacySnapshot.quote.addonLines[0].features;delete legacySnapshot.quote.plan.features;
+ assert.deepEqual(priceBooking(booking,{plans:[plan],addons:[addon],hall,previous:legacySnapshot}).plan.features,[]);
  assert.deepEqual(priceBooking(booking,{plans:[plan],addons:[addon],hall,previous:legacySnapshot}).addonLines[0].features,[]);
 
  // Round-trip saves preserve agreement, including hidden operation notes for internal users.
  booking=await modify('bookings',booking);assert.equal(booking.total,27300);
  const clientView=(await request('/data','GET',null,client)).data.bookings.find(b=>b.id===booking.id);assert.ok(clientView);assert.equal(clientView.operationsNotes,undefined);assert.equal(clientView.quote.total,27300);assert.deepEqual(clientView.quote.addonLines[0].features,addon.features);
- await modify('plans',plan,{jainRate:900});await modify('addons',addon,{price:8000,features:['Updated inclusions for new bookings']});await modify('halls',hall,{price:50000});
- booking=await modify('bookings',booking,{notes:'Saved rates stay unchanged'});assert.equal(booking.total,27300);assert.equal(booking.quote.venueRate,10000);assert.equal(booking.quote.plateRate,120);assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
+ await modify('plans',plan,{jainRate:900,features:['New menu and venue offer']});await modify('addons',addon,{price:8000,features:['Updated inclusions for new bookings']});await modify('halls',hall,{price:50000});
+ booking=await modify('bookings',booking,{notes:'Saved rates stay unchanged'});assert.equal(booking.total,27300);assert.equal(booking.quote.venueRate,10000);assert.equal(booking.quote.plateRate,120);assert.deepEqual(booking.quote.plan.features,plan.features);assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
  booking=await modify('bookings',booking,{addOns:[{id:addon.id,quantity:3}]});assert.equal(booking.quote.addonAmount,3000);assert.equal(booking.total,28350);
  // Client cannot change tax, advance, unit rates or provide discounts on a new request.
  const platePlan=await add('plans',{...plan,name:'Test plate plan',mode:'plate'});
@@ -64,9 +69,9 @@ try {
  const active=(await request('/data','GET',null,client)).data;assert.ok(!active.plans.some(p=>p.id===plan.id));assert.ok(!active.addons.some(a=>a.id===addon.id));
  booking=await modify('bookings',booking);assert.equal(booking.total,28350);
  await request('/plans/'+plan.id,'DELETE',null,owner);await request('/addons/'+addon.id,'DELETE',null,owner);
- booking=await modify('bookings',booking,{notes:'Catalog records removed, agreement preserved'});assert.equal(booking.quote.plan.name,plan.name);assert.equal(booking.quote.addonLines[0].name,addon.name);assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
+ booking=await modify('bookings',booking,{notes:'Catalog records removed, agreement preserved'});assert.equal(booking.quote.plan.name,plan.name);assert.deepEqual(booking.quote.plan.features,plan.features);assert.equal(booking.quote.addonLines[0].name,addon.name);assert.deepEqual(booking.quote.addonLines[0].features,addon.features);
  assert.equal((await request('/bookings/'+booking.id,'PUT',{...booking,planId:''},owner)).status,400);
- console.log('PASS packages: catalog CRUD and permissions, tenant isolation, server-priced quotes, all pricing modes, menu/plate/add-on validation, taxes/discount/advance, client restrictions, validated inclusion lists, protected inclusion/rate snapshots, internal notes, and paid-balance protection.');
+ console.log('PASS packages: catalog CRUD and permissions, tenant isolation, server-priced quotes, all pricing modes, menu/plate/add-on validation, taxes/discount/advance, client restrictions, validated plan and service inclusion lists, protected inclusion/rate snapshots, internal notes, and paid-balance protection.');
 } finally {
  // Remove dependent payment and booking records before halls/catalog records.
  for(const [kind,id] of [...cleanup].reverse())await request(`/${kind}/${id}`,'DELETE',null,owner);

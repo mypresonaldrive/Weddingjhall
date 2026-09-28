@@ -52,6 +52,8 @@ try {
   env: { ...process.env, TEST_URL: base + '/api' },
  });
  console.log(stdout.trim());
+ const menus = await run(process.execPath, ['tests/food-menus.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });
+ console.log(menus.stdout.trim());
  const packages = await run(process.execPath, ['tests/packages.mjs'], { env: { ...process.env, TEST_URL: base + '/api' } });
  console.log(packages.stdout.trim());
  const login = await fetch(base + '/api/auth/login', {
@@ -88,14 +90,20 @@ try {
  change('t1-addon-0', row => { delete row.features; });
  change('t1-addon-1', row => { delete row.features; row.description='My own custom service agreement'; });
  change('t1-addon-2', row => { row.features=[]; });
+ change('t1-plan-1', row => { delete row.menus; });
+ change('t1-plan-2', row => { delete row.menus;row.description='My own custom model'; });
+ change('t1-plan-3', row => { row.menus=[]; });
  fixture.close();
  await start();
  const upgraded=await read();
  assert.deepEqual(upgraded.addons.find(a=>a.id==='t1-addon-0').features,before.addons.find(a=>a.id==='t1-addon-0').features);
  assert.equal(upgraded.addons.find(a=>a.id==='t1-addon-1').features,undefined);
  assert.deepEqual(upgraded.addons.find(a=>a.id==='t1-addon-2').features,[]);
+ assert.deepEqual(upgraded.plans.find(a=>a.id==='t1-plan-1').menus,before.plans.find(a=>a.id==='t1-plan-1').menus);
+ assert.equal(upgraded.plans.find(a=>a.id==='t1-plan-2').menus,undefined);
+ assert.deepEqual(upgraded.plans.find(a=>a.id==='t1-plan-3').menus,[]);
  await stop();
- console.log('PASS: safe inclusion upgrade for legacy catalog entries.');
+ console.log('PASS: safe service-inclusion and food-menu upgrades for legacy catalog entries.');
  console.log('PASS: production static assets, custom port/data directory, public health check, graceful SIGTERM, and restart persistence.');
 } finally {
  if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGKILL'); await exited; }

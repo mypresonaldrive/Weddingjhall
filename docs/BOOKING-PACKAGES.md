@@ -1,18 +1,18 @@
-# Booking plans, catering and extra services
+# Pricing models, food menus and booking printing
 
 ## Getting started
 
-1. Open **Packages & add-ons** in the sidebar.
-2. Owners can create, edit, deactivate or delete booking plans and extra services. Staff and clients can view the catalog but cannot change it.
-3. Create or edit a booking, enter event details, then choose a booking plan.
+1. Open **Pricing models** in the sidebar.
+2. Owners can create, edit, deactivate or delete pricing models and extra services. Staff and clients can view the catalog but cannot change it.
+3. Create or edit a booking, enter event details, then choose a pricing model.
 4. Choose meal type, guaranteed plates and additional plates when applicable.
 5. Select services and quantities, review the live estimate and save.
 
-Each tenant receives four reference plans and eight reference services once. Owners should review their own menus, inclusions, rates and tax treatment before using these as real offers. The catalog is independently editable in each workspace. Deleted items are not automatically re-seeded on restart.
+Each tenant receives four reference models and eight reference services once. Owners should review their own menus, inclusions, rates and tax treatment before using these as real offers. The catalog is independently editable in each workspace. Deleted items are not automatically re-seeded on restart.
 
-## Pricing modes
+## Billing methods
 
-| Plan | How the charge is calculated |
+| Billing method | How the charge is calculated |
 | --- | --- |
 | Venue only | The selected hall's rental + selected add-ons |
 | Per plate — venue included | Billed plates × chosen meal rate + add-ons; no separate hall rent |
@@ -21,11 +21,26 @@ Each tenant receives four reference plans and eight reference services once. Own
 
 A single plan applies to each booking. Different bookings can use different plans.
 
-Meal types are **Vegetarian**, **Jain / No onion-garlic**, **Non-vegetarian**, and **Mixed menu**. Owners set a rate for each type on per-plate plans. A mixed menu is one agreed rate per billed plate, not separate veg/non-veg guest groups. The exact menu belongs in the plan inclusions and booking dietary notes.
+Meal types are **Vegetarian**, **Jain / No onion-garlic**, **Non-vegetarian**, and **Mixed menu**. Owners set rates for offered meal types on per-plate models. A mixed menu is one agreed rate per billed plate, not separate veg/non-veg guest groups. Each configured meal type has its own itemized food menu. Booking dietary notes record additional preferences. Models without itemized menus retain legacy meal-type support.
 
 Guest count estimates attendance. **Guaranteed plates** are the minimum billable commitment. **Extra plates** are added to that commitment at the same agreed rate. These are not “actual attendance”; the app does not automatically lower a guarantee if fewer guests arrive.
 
 Plate counts must be whole numbers; the guarantee must meet the plan minimum, and guaranteed plus extra plates must fit within the selected hall's capacity. Fixed packages enforce their included guest limit as well as hall capacity.
+
+## Food menu editor
+
+Create named models such as “Silver Vegetarian Menu”, select one of the four billing methods, and add food menus. These are menu packages—not programmable pricing formulas or plan inclusion checklists.
+
+- Add up to four dietary menus. Only configured types can be selected for new bookings.
+- Add, rename, reorder or remove courses such as welcome drinks, starters, main course, breads/rice and desserts.
+- Enter dishes one per line, or explicitly insert an editable North Indian sample menu.
+- Each menu has 1–8 courses, with 1–20 items per course; up to 160 food items across a model. Course names allow 50 characters, dishes 100. Blank items are removed and duplicate dishes within a course are normalized case-insensitively.
+- Dishes are included in the model's price, not billed individually. Venue-only models cannot carry food menus. Fixed packages can offer a choice of meal type without changing their fixed rate.
+- Optional booking terms (up to 3,000 characters) appear on the full financial confirmation.
+
+Catalog cards preview menus, and food-item search finds relevant models. The booking snapshots the selected menu and model terms; editing or deleting the catalog does not rewrite saved agreements. Legacy bookings without menus are explicitly labeled as having no recorded itemized menu.
+
+The tenant-scoped `/api/pricing-models` API supports list/create and `/api/pricing-models/:id` supports read/update/delete. The original `/api/plans` write routes and internal `plans` storage remain compatible. Omitting `menus` or `terms` on edit preserves them; explicit `menus: []` clears future menus. Only untouched reference models with no menus property receive sample menus on upgrade.
 
 ## Extra services
 
@@ -102,12 +117,23 @@ A booking still reserves the **entire hall for one event date**. Ceremony times 
 
 Owners/staff can download the last saved estimate from the booking editor. Clients can see their own itemized quote and download a UTF-8 text estimate from booking details. Unsaved draft changes and internal vendor notes are not included in the download.
 
+### Printable confirmations
+
+Use a booking row’s printer button or **Print confirmation** in booking details/editing:
+
+- **Full financial copy:** saved event/menu/services, recorded charges, tax, advance, current payment records, balance, saved terms and signature lines.
+- **Event-only copy:** event details, selected menu and services, without structured prices, payments, financial terms or general booking notes.
+
+Open the preview, then choose **Print / Save as PDF**. The standalone white A4 document is independent of the app’s theme. Pending and cancelled bookings are clearly labeled and never represented as confirmed reservations. Internal operations/vendor notes are never printed. Review free-text menu/preferences before sharing: user-entered prices in those fields are not automatically redacted.
+
+The authenticated `/api/bookings/:id/confirmation?format=full|event` route enforces tenant and client ownership, escapes dynamic HTML and disables caching. It is not a public share link. Downloaded PDFs contain private booking data: share them only with intended recipients. A booking confirmation is not a statutory tax invoice.
+
 ## Storage and deployment
 
 This feature extends the existing temporary storage setup. It does not introduce Supabase or permanent SQLite mounts. Docker now copies the shared pricing module into both its build and runtime stages. The existing Coolify deployment settings remain the same.
 
 ## Verification
 
-`npm run test:deployment` builds and starts an isolated production server, runs the original API suite plus package tests, checks restart persistence and then removes test data. `npm test` runs both API suites against an already running demo server.
+`npm run test:deployment` builds and starts an isolated production server, runs the original API suite plus package and menu/printing tests, checks restart persistence and then removes test data. `npm test` runs appearance checks and all API suites against an already running demo server.
 
 Package tests cover catalog permissions/CRUD, tenant boundaries, all price modes, plate/service validation, tax/discount/advance calculations, protection against submitted rate/total manipulation, saved-price snapshots, internal-note privacy and paid-balance protection.

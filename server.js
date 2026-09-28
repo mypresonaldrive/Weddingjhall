@@ -5,7 +5,9 @@ import cookieParser from 'cookie-parser';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { defaultPlans, defaultAddons, EVENT_TYPES, PLAN_MODES, ADDON_UNITS, ADDON_CATEGORIES, priceBooking, number, normalizeFeatures } from './shared/booking-pricing.js';
+import { normalizeMenus } from './shared/food-menus.js';
+import { renderConfirmation } from './shared/confirmation.js';
+import { defaultPlans, defaultAddons, EVENT_TYPES, PLAN_MODES, ADDON_UNITS, ADDON_CATEGORIES, priceBooking, number, normalizeFeatures, RATE_KEYS } from './shared/booking-pricing.js';
 
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer between 1 and 65535.');
@@ -56,6 +58,17 @@ for (const {id:tenant} of db.prepare('SELECT id FROM tenants').all()) {
  });
 }
 
+// Add reference food menus only to untouched legacy reference models.
+for (const {id:tenant} of db.prepare('SELECT id FROM tenants').all()) {
+ defaultPlans.forEach((reference,index) => {
+  const row=db.prepare('SELECT body FROM records WHERE id=? AND tenant=? AND kind=?').get(tenant+'-plan-'+index,tenant,'plans');
+  if(!row)return;
+  const model=JSON.parse(row.body);
+  if(!Object.hasOwn(model,'menus')&&Object.keys(reference).filter(key=>!['menus','terms'].includes(key)).every(key=>model[key]===reference[key])) {
+   db.prepare('UPDATE records SET body=? WHERE id=? AND tenant=?').run(JSON.stringify({...model,menus:reference.menus,terms:model.terms||''}),tenant+'-plan-'+index,tenant);
+  }
+ });
+}
 const app=express();
 app.disable('x-powered-by');
 // Public, lightweight readiness endpoint for Docker and Coolify.
@@ -85,9 +98,23 @@ app.get('/api/availability', (req, res) => {
  });
  res.set('Cache-Control', 'no-store').json({ date, halls });
 });
+// New catalog terminology uses the existing tenant-scoped records for compatibility.
+app.get('/api/pricing-models',(req,res)=>res.json(visible(req,'plans')));
+app.get('/api/pricing-models/:id',(req,res)=>{const model=visible(req,'plans').find(model=>model.id===req.params.id);if(!model)return res.status(404).json({error:'Pricing model not found.'});res.json(model);});
+app.get('/api/bookings/:id/confirmation',(req,res)=>{
+ const format=req.query.format||'full';
+ if(!['full','event'].includes(format))return res.status(400).json({error:'Choose full or event-only confirmation.'});
+ const booking=visible(req,'bookings').find(booking=>booking.id===req.params.id);
+ if(!booking)return res.status(404).json({error:'Booking not found.'});
+ const client=list(req.user.tenant,'clients').find(client=>client.id===booking.clientId);
+ const payments=list(req.user.tenant,'payments').filter(payment=>payment.bookingId===booking.id);
+ const tenant=db.prepare('SELECT name FROM tenants WHERE id=?').get(req.user.tenant);
+ res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'self'"});
+ res.type('html').send(renderConfirmation({booking,client,payments,organization:tenant.name,format}));
+});
 app.get('/api/data',(req,res)=>res.json(Object.fromEntries(['halls','bookings','clients','payments','staff','plans','addons'].map(k=>[k,visible(req,k)]))));
-const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes','planId','plateType','guaranteedPlates','extraPlates','addOns','discount','taxRate','advancePercent','baraatTime','muhuratTime','endTime','familyContact','familyPhone','menuNotes','operationsNotes'],plans:['name','description','mode','minimumPlates','maxGuests','fixedPrice','vegRate','jainRate','nonVegRate','mixedRate','advancePercent','taxRate','status'],addons:['name','description','category','price','unit','status','features'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
-function access(req,res,next){const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff','plans','addons'].includes(kind))return res.status(403).json({error:'Only owners can manage halls, staff, plans and add-ons.'});next();}
+const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes','planId','plateType','guaranteedPlates','extraPlates','addOns','discount','taxRate','advancePercent','baraatTime','muhuratTime','endTime','familyContact','familyPhone','menuNotes','operationsNotes'],plans:['name','description','mode','minimumPlates','maxGuests','fixedPrice','vegRate','jainRate','nonVegRate','mixedRate','advancePercent','taxRate','status','features','menus','terms'],addons:['name','description','category','price','unit','status','features'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
+function access(req,res,next){if(req.params.kind==='pricing-models')req.params.kind='plans';const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff','plans','addons'].includes(kind))return res.status(403).json({error:'Only owners can manage halls, staff, plans and add-ons.'});next();}
 function validate(req,body,id){const kind=req.params.kind;const data=Object.fromEntries(fields[kind].filter(k=>body[k]!==undefined).map(k=>[k,body[k]]));for(const k of ['name','email','phone','description','notes','position','familyContact','familyPhone','menuNotes','operationsNotes'])if(data[k]!==undefined)data[k]=String(data[k]).trim().slice(0,2000);
  if(kind==='bookings'){
  const hall=list(req.user.tenant,'halls').find(h=>h.id===data.hallId);const client=visible(req,'clients').find(c=>c.id===data.clientId);if(!hall||!client)throw Error('Select a valid hall and client.');if(hall.status==='Maintenance'&&!id)throw Error('This hall is under maintenance. Please choose an available hall.');if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date)||isNaN(Date.parse(data.date))||new Date(data.date).toISOString().slice(0,10)!==data.date)throw Error('Enter a valid event date.');if(!data.name||!data.time)throw Error('Event name and time are required.');if(!Number.isFinite(+data.guests)||+data.guests<1||+data.guests>hall.capacity)throw Error(`Guest count must be between 1 and ${hall.capacity}.`);if(list(req.user.tenant,'bookings').some(b=>b.id!==id&&b.hallId===hall.id&&b.date===data.date&&b.status!=='Cancelled'))throw Error('This hall is already booked on that date. Please choose another hall or date.');data.hall=hall.name;data.client=client.name;if(req.user.role==='client'){data.status='Pending';data.total=hall.price;}if(!['Confirmed','Pending','Completed','Cancelled'].includes(data.status))throw Error('Choose a valid booking status.');
@@ -109,20 +136,24 @@ function validate(req,body,id){const kind=req.params.kind;const data=Object.from
  if(['plans','addons'].includes(kind)){
   if(!data.name||data.name.length>120)throw Error('Enter a name of up to 120 characters.');
   if(!['Active','Inactive'].includes(data.status))throw Error('Choose a valid catalog status.');
+  const previousCatalogItem=id?list(req.user.tenant,kind).find(item=>item.id===id):undefined;
+  data.features=normalizeFeatures(data.features===undefined?previousCatalogItem?.features:data.features);
   if(kind==='plans'){
+   data.menus=normalizeMenus(data.menus===undefined?previousCatalogItem?.menus:data.menus);
+   const terms=data.terms===undefined?(previousCatalogItem?.terms||''):data.terms;
+   if(typeof terms!=='string'||terms.length>3000)throw Error('Booking terms must be text, up to 3000 characters.');
+   data.terms=terms.trim();
+   if(data.mode==='venue'&&data.menus.length)throw Error('Venue-only billing does not include food. Remove its menus or choose a catering/fixed billing method.');
    if(!PLAN_MODES.some(m=>m.value===data.mode))throw Error('Choose a valid pricing mode.');
    for(const k of ['minimumPlates','maxGuests'])data[k]=number(data[k]??0,k,{max:10000,integer:true});
    for(const k of ['fixedPrice','vegRate','jainRate','nonVegRate','mixedRate'])data[k]=number(data[k]??0,k);
    data.advancePercent=number(data.advancePercent??30,'Advance percentage',{max:100});
    data.taxRate=number(data.taxRate??0,'Tax rate',{max:28});
    if(['plate','combined'].includes(data.mode)&&data.minimumPlates<1)throw Error('Per-plate plans require at least one guaranteed plate.');
-   if(['plate','combined'].includes(data.mode)&&['vegRate','jainRate','nonVegRate','mixedRate'].some(k=>data[k]<=0))throw Error('Set a positive price for each plate type.');
+   if(['plate','combined'].includes(data.mode)&&(data.menus.length?data.menus.map(menu=>RATE_KEYS[menu.plateType]):['vegRate','jainRate','nonVegRate','mixedRate']).some(k=>data[k]<=0))throw Error('Set a positive price for each plate type.');
    if(data.mode==='fixed'&&(!data.fixedPrice||!data.maxGuests))throw Error('Set a fixed package price and included guest limit.');
   }else{
    data.price=number(data.price,'Service rate');
-   // Older API clients may omit this field on edit; only an explicit [] clears it.
-   const oldService=id?list(req.user.tenant,'addons').find(a=>a.id===id):undefined;
-   data.features=normalizeFeatures(data.features===undefined?oldService?.features:data.features);
    if(!ADDON_UNITS.includes(data.unit)||!ADDON_CATEGORIES.includes(data.category))throw Error('Choose a valid service category and billing unit.');
   }
  }

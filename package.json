@@ -6,8 +6,8 @@
     "dev": "node server.js",
     "build": "vite build",
     "start": "NODE_ENV=production node server.js",
-    "test": "node tests/api.mjs && node tests/packages.mjs",
-    "test:deployment": "npm run build && node tests/deployment.mjs"
+    "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs",
+    "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

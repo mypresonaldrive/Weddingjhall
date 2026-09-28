@@ -101,3 +101,11 @@ Before public production deployment, remove/disable automatic demo sign-in and s
 ## Imagery
 
 Venue images are locally stored for reliable previews. Demo imagery was sourced from [Carats & Cake](https://caratsandcake.com/articles/ceiling-wedding-decor) and [Pinterest venue inspiration](https://pinterest.com/ideas/chandelier-wedding-reception/952332121845). Replace these demonstration photographs with your own licensed venue photography for production.
+
+## Pricing models, menus and printing
+
+Open **Pricing models** to create, edit, deactivate or delete named menu packages. Select a billing method (venue-only, per-plate, venue + per-plate, fixed), set rates, and build food menus by dietary type and course. Existing bookings retain their agreed menu and rates.
+
+Use a booking’s printer action for either a **full financial confirmation** or an **event-only copy without financial fields**. Both support browser printing and Save as PDF. See [the model/menu and printing guide](docs/BOOKING-PACKAGES.md).
+
+Appearance settings offer **Periwinkle, Emerald, Ocean Blue and custom colors**, with Light, Dark and System modes. Choices persist in the current browser; light mode uses near-black body text.
