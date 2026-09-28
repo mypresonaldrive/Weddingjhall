@@ -18,9 +18,9 @@ npm run build
 npm start
 ```
 
-## Light lavender UI & booking improvements
+## Light periwinkle UI & booking improvements
 
-The light theme uses the supplied Lavender Lilt palette: `#D3D3FF`, `#9999CC`, `#575799`, and `#090933`. The sidebar and cards remain white, with lavender selection states and navy text. Amber, green, and red are retained for meaningful status feedback.
+The light theme uses the supplied periwinkle palette: `#CCCCFF`, `#A3A3CC`, `#5C5C99`, and `#292966`. White surfaces and darker secondary text keep forms readable; muted lavender is used for decorative accents. The sidebar and cards remain white, with lavender selection states and navy text. Amber, green, and red are retained for meaningful status feedback.
 
 - Combine event/client search, venue, payment status, and date-range filters. Sort by upcoming events, earliest/latest date, booking value, or balance due; export the filtered results.
 - Check venue availability as the event date changes. Conflict warnings suggest available alternatives and update venue pricing when selected. Guest-capacity feedback appears before submission.
@@ -34,6 +34,7 @@ The light theme uses the supplied Lavender Lilt palette: `#D3D3FF`, `#9999CC`, `
 - **Packages & add-ons**: tenant-specific catalogs with owner-managed pricing, descriptions and active/inactive status.
 - **Four booking models**: venue only, per plate with venue included, venue plus catering, and a fixed package.
 - **Four meal types**: vegetarian, Jain/no onion-garlic, non-vegetarian and mixed menu, with minimum guarantees and extra plate counts.
+- **What’s included**: add, edit, reorder or remove up to 20 inclusions per service, paste multi-line lists and preview the client-facing checklist. Inclusions are visible in the catalog, booking selector, quotes and estimate downloads, and are preserved with saved agreements.
 - **Quantity-based extras**: mandap/stage décor, baraat welcome, DJ, live food counters, guest rooms, power backup, photography and parking support; add custom services as needed.
 - **Itemized estimates**: discounts, configurable tax, advance targets and outstanding balances; server-calculated totals and snapshots preserve agreed rates.
 - **Event coordination**: tilak, roka, haldi, mehendi, sangeet and other event types; baraat/muhurat timings, family contact details, dietary preferences and private operations notes.

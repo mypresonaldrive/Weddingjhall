@@ -43,6 +43,24 @@ The unit labels explain the quantity; the calculation is always **quantity × ag
 
 An add-on is a charge line, **not a vendor reservation or inventory allocation**. Room stock, vendor schedules, actual service delivery and local DJ/noise permissions still need to be confirmed by the team.
 
+### What’s included in each service
+
+The owner’s add/edit service dialog has a dedicated **What’s included** editor:
+
+- Add, edit, reorder or remove checklist items. **Enter** adds another row after a completed item.
+- Paste multiple lines into a row to replace it with separate inclusions. Simple bullet prefixes are removed.
+- Use example suggestions as starting points; adding an example is always explicit, never automatic.
+- Preview the client-facing checklist before saving.
+- Up to **20 inclusions**, each **160 characters**. Blank lines are removed, whitespace normalized and case-insensitive duplicates removed while preserving the first occurrence and order.
+
+For a camera/photography add-on, examples might be “Professional camera equipment”, “On-site photographer” and “Edited digital photos”. The venue must set the actual agreed deliverables.
+
+Inclusions describe what the service rate already covers; they are **not separately priced or individually selectable add-ons**. The service checklist appears on catalog cards, in booking selection, under the quote’s service lines and in the downloaded text estimate. Search also matches inclusion text. Long checklists can be expanded without selecting/deselecting the service.
+
+The API takes inclusions from the authorized tenant catalog, not client-submitted claims. New bookings snapshot the agreed list alongside the service rate. Catalog edits or deletion do not rewrite an existing agreement. Older booking snapshots without inclusions remain empty rather than acquiring today’s promises retroactively.
+
+Older API clients may omit `features` when editing a service without clearing it; an explicit empty array clears the list for future bookings. Untouched reference services receive example lists on upgrade. Customized services and explicitly empty lists are not overwritten.
+
 ## Estimate, tax and advance
 
 1. Subtotal = venue charge + catering/package charge + add-ons.

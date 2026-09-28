@@ -5,6 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
+import { DatabaseSync } from 'node:sqlite';
 
 const run = promisify(execFile);
 const dir = await mkdtemp(path.join(tmpdir(), 'gatherhall-deploy-'));
@@ -76,6 +77,25 @@ try {
  await start();
  assert.deepEqual(await read(), before, 'Data and sessions should survive process restarts.');
  await stop();
+ // Simulate older catalog data: pristine fixtures may gain reference inclusions,
+ // but customized service descriptions and explicit empty lists must be respected.
+ const fixture = new DatabaseSync(path.join(dir, 'gatherhall.sqlite'));
+ const change = (id, update) => {
+  const row = fixture.prepare('SELECT body FROM records WHERE id=?').get(id);
+  const body = JSON.parse(row.body); update(body);
+  fixture.prepare('UPDATE records SET body=? WHERE id=?').run(JSON.stringify(body),id);
+ };
+ change('t1-addon-0', row => { delete row.features; });
+ change('t1-addon-1', row => { delete row.features; row.description='My own custom service agreement'; });
+ change('t1-addon-2', row => { row.features=[]; });
+ fixture.close();
+ await start();
+ const upgraded=await read();
+ assert.deepEqual(upgraded.addons.find(a=>a.id==='t1-addon-0').features,before.addons.find(a=>a.id==='t1-addon-0').features);
+ assert.equal(upgraded.addons.find(a=>a.id==='t1-addon-1').features,undefined);
+ assert.deepEqual(upgraded.addons.find(a=>a.id==='t1-addon-2').features,[]);
+ await stop();
+ console.log('PASS: safe inclusion upgrade for legacy catalog entries.');
  console.log('PASS: production static assets, custom port/data directory, public health check, graceful SIGTERM, and restart persistence.');
 } finally {
  if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGKILL'); await exited; }

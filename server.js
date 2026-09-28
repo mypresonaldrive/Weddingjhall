@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { defaultPlans, defaultAddons, EVENT_TYPES, PLAN_MODES, ADDON_UNITS, ADDON_CATEGORIES, priceBooking, number } from './shared/booking-pricing.js';
+import { defaultPlans, defaultAddons, EVENT_TYPES, PLAN_MODES, ADDON_UNITS, ADDON_CATEGORIES, priceBooking, number, normalizeFeatures } from './shared/booking-pricing.js';
 
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer between 1 and 65535.');
@@ -43,6 +43,19 @@ function seedCatalog(tenant) {
  } catch(error) { db.exec('ROLLBACK'); throw error; }
 }
 for (const tenant of db.prepare('SELECT id FROM tenants').all()) seedCatalog(tenant.id);
+// Add reference inclusions only to untouched, older seeded services. Never change
+// custom entries, explicit empty lists, or previously agreed booking snapshots.
+for (const {id:tenant} of db.prepare('SELECT id FROM tenants').all()) {
+ defaultAddons.forEach((reference,index) => {
+  const row=db.prepare('SELECT body FROM records WHERE id=? AND tenant=? AND kind=?').get(tenant+'-addon-'+index,tenant,'addons');
+  if(!row)return;
+  const service=JSON.parse(row.body);
+  if(!Object.hasOwn(service,'features')&&['name','description','category','price','unit','status'].every(key=>service[key]===reference[key])) {
+   db.prepare('UPDATE records SET body=? WHERE id=? AND tenant=?').run(JSON.stringify({...service,features:reference.features}),tenant+'-addon-'+index,tenant);
+  }
+ });
+}
+
 const app=express();
 app.disable('x-powered-by');
 // Public, lightweight readiness endpoint for Docker and Coolify.
@@ -73,7 +86,7 @@ app.get('/api/availability', (req, res) => {
  res.set('Cache-Control', 'no-store').json({ date, halls });
 });
 app.get('/api/data',(req,res)=>res.json(Object.fromEntries(['halls','bookings','clients','payments','staff','plans','addons'].map(k=>[k,visible(req,k)]))));
-const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes','planId','plateType','guaranteedPlates','extraPlates','addOns','discount','taxRate','advancePercent','baraatTime','muhuratTime','endTime','familyContact','familyPhone','menuNotes','operationsNotes'],plans:['name','description','mode','minimumPlates','maxGuests','fixedPrice','vegRate','jainRate','nonVegRate','mixedRate','advancePercent','taxRate','status'],addons:['name','description','category','price','unit','status'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
+const fields={halls:['name','type','capacity','price','image','status','description'],bookings:['name','clientId','client','hallId','hall','date','time','guests','type','status','total','notes','planId','plateType','guaranteedPlates','extraPlates','addOns','discount','taxRate','advancePercent','baraatTime','muhuratTime','endTime','familyContact','familyPhone','menuNotes','operationsNotes'],plans:['name','description','mode','minimumPlates','maxGuests','fixedPrice','vegRate','jainRate','nonVegRate','mixedRate','advancePercent','taxRate','status'],addons:['name','description','category','price','unit','status','features'],clients:['name','email','phone','notes','status'],staff:['name','email','phone','position','status'],payments:['bookingId','client','amount','date','method','status','reference']};
 function access(req,res,next){const kind=req.params.kind;if(!fields[kind])return res.status(404).json({error:'Resource not found.'});if(req.user.role==='client'&&(kind!=='bookings'||req.method!=='POST'))return res.status(403).json({error:'This action requires a team member.'});if(req.user.role==='staff'&&['halls','staff','plans','addons'].includes(kind))return res.status(403).json({error:'Only owners can manage halls, staff, plans and add-ons.'});next();}
 function validate(req,body,id){const kind=req.params.kind;const data=Object.fromEntries(fields[kind].filter(k=>body[k]!==undefined).map(k=>[k,body[k]]));for(const k of ['name','email','phone','description','notes','position','familyContact','familyPhone','menuNotes','operationsNotes'])if(data[k]!==undefined)data[k]=String(data[k]).trim().slice(0,2000);
  if(kind==='bookings'){
@@ -107,6 +120,9 @@ function validate(req,body,id){const kind=req.params.kind;const data=Object.from
    if(data.mode==='fixed'&&(!data.fixedPrice||!data.maxGuests))throw Error('Set a fixed package price and included guest limit.');
   }else{
    data.price=number(data.price,'Service rate');
+   // Older API clients may omit this field on edit; only an explicit [] clears it.
+   const oldService=id?list(req.user.tenant,'addons').find(a=>a.id===id):undefined;
+   data.features=normalizeFeatures(data.features===undefined?oldService?.features:data.features);
    if(!ADDON_UNITS.includes(data.unit)||!ADDON_CATEGORIES.includes(data.category))throw Error('Choose a valid service category and billing unit.');
   }
  }
