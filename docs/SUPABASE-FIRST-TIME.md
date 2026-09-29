@@ -413,3 +413,7 @@ Use `localhost` consistently; do not open the local app as `127.0.0.1` while `AP
 - CLI migration management: <https://supabase.com/docs/guides/deployment/database-migrations>
 
 Supabase dashboard labels and key-management UI can change. Follow the current official pages if a menu has moved; never weaken the authorization design to make an old tutorial work.
+
+## New Settings and messaging features
+
+After the four migrations above, apply `202609290005_messaging.sql` once. This is required by the current app health check. Follow [the simple messaging setup steps](MESSAGING.md#simple-setup) to enable encrypted provider settings and channel credits. Keep the worker disabled until a controlled live-provider test passes.

@@ -11,7 +11,9 @@
     "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs",
     "test:saas:http": "npm run build && node tests/saas-http.mjs",
     "test:saas:ui": "node tests/saas-ui.mjs",
-    "test:marketing:ui": "node tests/marketing-ui.mjs"
+    "test:marketing:ui": "node tests/marketing-ui.mjs",
+    "test:messaging": "node tests/messaging.mjs && node tests/messaging-worker.mjs && node tests/messaging-http.mjs",
+    "test:messaging:ui": "node tests/messaging-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -20,6 +22,7 @@
     "express": "^4.21.2",
     "helmet": "^8.3.0",
     "lucide-react": "^0.468.0",
+    "nodemailer": "^10.0.12",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.6.5"

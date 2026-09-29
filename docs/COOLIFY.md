@@ -103,3 +103,7 @@ The repository includes `.github/workflows/ci.yml` to run these local checks on 
 ## Public website and CMS
 
 The public home now lives at `/`, with English/Hindi pages, journal and a platform-owner CMS at `/platform#cms`. The old demo workspace is at `/workspace`. Apply follow-up migration `202609290004_website_cms.sql` and read [the website/CMS guide](WEBSITE-CMS.md). Review and publish real legal policies before opening contact enquiries. The CMS has separate draft/public snapshots and MFA-restricted access; the demo editor uses this browser's localStorage only, not production storage.
+
+## Settings and messaging update
+
+Apply `202609290005_messaging.sql` after migrations 001–004. Configure runtime-only `INTEGRATION_ENCRYPTION_KEY`, keep `MESSAGE_WORKER_ENABLED=false` until providers/templates/consent/credits are ready, then follow [MESSAGING.md](MESSAGING.md). Changes to saved Razorpay credentials require a restart of all instances.

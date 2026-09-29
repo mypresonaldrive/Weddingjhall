@@ -1,3 +1,5 @@
+import {installIntegrationSettings,loadSavedRazorpay} from './integrations.js';
+import {installMessaging,installRechargeWebhook,startMessageWorker} from './messaging.js';
 import express from 'express';
 import {installPublicCMS,installPlatformCMS} from './cms.js';
 import cookieParser from 'cookie-parser';
@@ -14,12 +16,13 @@ for(const key of ['SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY'
 const origin=new URL(env.APP_URL).origin,secure=new URL(origin).protocol==='https:';
 if(env.NODE_ENV==='production'&&!secure)throw Error('APP_URL must use HTTPS in production.');
 if(!/^https:\/\//.test(env.SUPABASE_URL))throw Error('SUPABASE_URL must use HTTPS.');
+const options={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
+const admin=createClient(env.SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,options);
+await loadSavedRazorpay(admin,async q=>{const {data,error}=await q;if(error)throw Error('Integration settings unavailable. Apply messaging migration and check the encryption key.');return data;});
 const billingEnabled=!!(env.RAZORPAY_KEY_ID&&env.RAZORPAY_KEY_SECRET&&env.RAZORPAY_WEBHOOK_SECRET);
 if([env.RAZORPAY_KEY_ID,env.RAZORPAY_KEY_SECRET,env.RAZORPAY_WEBHOOK_SECRET].some(Boolean)&&!billingEnabled)throw Error('Configure all three Razorpay credentials together.');
 const billingMode=env.RAZORPAY_KEY_ID?.startsWith('rzp_live_')?'live':'test';
 if(billingEnabled&&env.NODE_ENV==='production'&&billingMode==='test'&&env.ALLOW_TEST_BILLING!=='true')throw Error('Test billing requires ALLOW_TEST_BILLING=true in a production Node deployment.');
-const options={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
-const admin=createClient(env.SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,options);
 const authClient=()=>createClient(env.SUPABASE_URL,env.SUPABASE_ANON_KEY,options);
 const userClient=token=>createClient(env.SUPABASE_URL,env.SUPABASE_ANON_KEY,{...options,global:{headers:{Authorization:'Bearer '+token}}});
 const app=express();app.disable('x-powered-by');app.set('trust proxy',Number(env.TRUST_PROXY||0));
@@ -36,6 +39,7 @@ function clearSession(res){res.clearCookie(accessCookie,cookieOptions);res.clear
 const rateLimit=(tag,hits,seconds)=>async(req,res,next)=>{try{const key=createHmac('sha256',env.RATE_LIMIT_SECRET||env.SUPABASE_SERVICE_ROLE_KEY).update(tag+'|'+req.ip).digest('hex');if(!await rpc('saas_rate_limit',{bucket:key,max_hits:hits,seconds}))return next(fail('Too many attempts. Please try again later.',429));next();}catch(error){next(error);}};
 async function razor(path,method='GET',body){if(!billingEnabled)throw fail('Billing is not configured. Contact the platform operator.',503);const response=await fetch('https://api.razorpay.com/v1/'+path,{method,headers:{Authorization:'Basic '+Buffer.from(env.RAZORPAY_KEY_ID+':'+env.RAZORPAY_KEY_SECRET).toString('base64'),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok)throw fail('Payment provider could not complete this request. Please contact support before retrying.',502);return data;}
 async function synchronize(id,eventId=null,eventType='verification',payment=null){const observed=new Date().toISOString();const state=await razor('subscriptions/'+encodeURIComponent(id));const p={status:state.status,current_end:state.current_end||0};if(payment&&eventType==='subscription.charged'&&payment.status==='captured'&&payment.currency==='INR'){p.payment_id=payment.id;p.amount_paise=payment.amount;p.currency=payment.currency;p.captured_at=payment.created_at;}await rpc('saas_sync_subscription',{provider_id:id,observed,p,event_id:eventId,event_type:eventType});return state;}
+installRechargeWebhook(app,{admin,result,rpc,route,razor});
 // Signature validation needs the original bytes; register before express.json().
 app.post('/api/webhooks/razorpay',express.raw({type:'application/json',limit:'256kb'}),route(async(req,res)=>{
  if(!billingEnabled||!Buffer.isBuffer(req.body)||!verifyWebhook(req.body,req.get('x-razorpay-signature'),env.RAZORPAY_WEBHOOK_SECRET))throw fail('Invalid webhook signature.',401);
@@ -49,7 +53,7 @@ app.post('/api/webhooks/razorpay',express.raw({type:'application/json',limit:'25
 }));
 app.use(express.json({limit:'256kb'}));app.use(cookieParser());
 app.use('/api',(req,res,next)=>{res.set('Cache-Control','no-store');if(!req.cookies.gh_csrf){res.cookie('gh_csrf',randomBytes(24).toString('hex'),{secure,sameSite:'strict',path:'/',maxAge:7*86400000});}if(!['GET','HEAD','OPTIONS'].includes(req.method)){const a=req.cookies.gh_csrf,b=req.get('x-csrf-token');if(req.get('origin')&&req.get('origin')!==origin)return next(fail('Untrusted request origin.',403));if(!a||!b||! /^[a-f0-9]{48}$/.test(a)||! /^[a-f0-9]{48}$/.test(b)||!timingSafeEqual(Buffer.from(a),Buffer.from(b)))return next(fail('Session security check failed. Refresh the page and retry.',403));}next();});
-app.get('/healthz',route(async(_req,res)=>{await Promise.all(['saas_plans','cms_entries'].map(table=>result(admin.from(table).select('id').limit(1))));res.json({status:'ok',mode:'saas'});}));
+app.get('/healthz',route(async(_req,res)=>{await Promise.all(['saas_plans','cms_entries','platform_integrations','message_jobs'].map(table=>result(admin.from(table).select(table==='platform_integrations'?'kind':'id').limit(1))));res.json({status:'ok',mode:'saas'});}));
 app.get('/api/config',(_req,res)=>res.json({mode:'saas',billingEnabled,billingMode,registrationEnabled:env.REGISTRATION_ENABLED!=='false',supportEmail:env.SUPPORT_EMAIL||'',captchaSiteKey:env.TURNSTILE_SITE_KEY||''}));
 app.get('/api/public/plans',route(async(_req,res)=>res.json((await result(admin.from('saas_plans').select('*').eq('published',true).order('monthly_paise'))).map(publicPlan))));
 installPublicCMS(app,{admin,result,rpc,route,rateLimit});
@@ -86,6 +90,8 @@ const member=(req,res,next)=>{if(!req.membership||req.membership.status!=='activ
 const owner=(req,res,next)=>{if(req.membership?.role!=='owner'||req.membership.status!=='active')return next(fail('Organization owner access required.',403));next();};
 const platform=(req,res,next)=>{if(!req.platform||req.claims.aal!=='aal2')return next(fail('Platform administrator access with MFA is required.',403));next();};
 installPlatformCMS(app,{admin,result,rpc,route,platform});
+installIntegrationSettings(app,{admin,result,route,platform,rateLimit});
+installMessaging(app,{admin,result,rpc,route,platform,owner,member,rateLimit,razor});
 const writeAccess=(req,res,next)=>{if(!req.entitlement?.active)return next(fail('Your subscription is inactive. You can view records, but must renew before making changes.',402));next();};
 app.post('/api/onboarding',rateLimit('onboarding',5,900),route(async(req,res)=>{if(env.REGISTRATION_ENABLED==='false')throw fail('New organization registration is currently closed.',403);if(!billingEnabled)throw fail('Registration opens after billing is configured.',503);const p=z.object({name:z.string().trim().min(2).max(120),phone:z.string().trim().max(30),city:z.string().trim().max(80),planId:z.string().uuid(),interval:z.enum(['monthly','yearly'])}).parse(req.body);const id=await rpc('saas_register_org',{actor:req.actor.id,p});res.status(201).json({tenantId:id});}));
 app.get('/api/billing',owner,route(async(req,res)=>{const count=async(kind,active=false)=>{let q=admin.from('saas_records').select('id',{count:'exact',head:true}).eq('tenant_id',req.organization.id).eq('kind',kind);if(active)q=q.eq('body->>status','Active');const {count,error}=await q;if(error)throw fail('Usage unavailable.');return count;};const [halls,staff]=await Promise.all([count('halls'),count('staff',true)]);res.json({organization:req.organization,subscription:req.subscription,entitlement:req.entitlement,usage:{halls,staff},billingEnabled,billingMode,payments:await result(req.db.from('billing_payments').select('*').eq('tenant_id',req.organization.id).order('captured_at',{ascending:false}).limit(50))});}));
@@ -128,5 +134,6 @@ app.use('/api',(_req,res)=>res.status(404).json({error:'API endpoint not found.'
 app.use((error,req,res,_next)=>{const status=error instanceof z.ZodError?400:error.status||500;if(status===500)console.error('SaaS request failed',{path:req.path,code:error.code||'internal'});res.status(status).json({error:error instanceof z.ZodError?error.issues[0]?.message||'Check the submitted fields.':status===500?'The request could not be completed. Please try again or contact support.':error.message});});
 if(env.NODE_ENV==='production'){app.use(express.static('dist',{index:false}));app.get('*',(_req,res)=>res.sendFile(process.cwd()+'/dist/index.html'));}else{const {createServer}=await import('vite');app.use((await createServer({server:{middlewareMode:true,allowedHosts:true},appType:'spa'})).middlewares);}
 const port=Number(env.PORT||3000);if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid PORT.');
+const stopMessages=startMessageWorker({admin,result,rpc});
 const server=app.listen(port,'0.0.0.0',()=>console.log(`Gatherhall SaaS listening on ${port}; billing mode: ${billingEnabled?billingMode:'not configured'}`));
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{stopMessages();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();});

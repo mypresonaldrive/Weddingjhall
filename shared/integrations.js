@@ -1,0 +1,7 @@
+export const integrationFields={
+ razorpay:{label:'Payment gateway · Razorpay',hint:'Organization subscriptions and credit recharges. Saved credentials take effect after restarting all app instances. Do not switch Razorpay accounts with active mandates.',fields:[['keyId','Key ID'],['keySecret','Key secret',true],['webhookSecret','Webhook secret',true]]},
+ email:{label:'Email · SMTP',hint:'Booking notifications only. Configure authentication email separately in Supabase. TLS is required.',fields:[['host','SMTP host'],['port','Port (465 or 587)'],['user','Username'],['password','Password',true],['from','Verified sender email']]},
+ sms:{label:'SMS · MSG91',hint:'Use an approved Indian DLT flow with variables event, date, time, venue and organization (each capped at 30 characters). One credit per accepted API message; provider segment costs are separate.',fields:[['authKey','Auth key',true],['flowId','Approved flow ID'],['approved','I confirm this SMS template has provider / DLT approval',false,'checkbox']]},
+ whatsapp:{label:'WhatsApp · Meta Cloud API',hint:'Approved utility template with one body parameter (message). Provider pricing is separate from your credit-pack prices.',fields:[['token','Permanent access token',true],['phoneId','Phone number ID'],['template','Approved template name'],['language','Template language (e.g. en)'],['approved','I confirm this WhatsApp utility template is approved',false,'checkbox']]}
+};
+export const channels=['email','sms','whatsapp'];

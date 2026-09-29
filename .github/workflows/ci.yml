@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - name: Apply all migrations and test SaaS invariants
         run: npm run test:saas
+      - name: Messaging wallet, consent, encryption and provider mocks
+        run: npm run test:messaging
       - name: Production HTTP security smoke tests (no live services)
         run: npm run test:saas:http
       - name: Booking, pricing, auth, printing and deployment regressions

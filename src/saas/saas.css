@@ -7,3 +7,6 @@
 
 [data-theme=dark] .saas-app .saas-button.primary{background:#71669e;color:#fff;border-color:#71669e}
 .saas-table-wrap{position:relative}.saas-overview-columns>*,.saas-main,.saas-content{min-width:0}
+
+/* Keep all platform navigation reachable as management sections grow. */
+.saas-sidebar{overflow-y:auto}

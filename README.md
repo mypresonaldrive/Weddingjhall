@@ -150,3 +150,7 @@ Bookings are organized as **Event & duration → Pricing & catering → Extras �
 The booking dialog now has four navigable steps with **Back / Continue / Review**, required-field checks before advancing, and final validation before saving. Values remain in the same in-memory draft across steps (not persisted until Save). On phones the dialog uses the available screen height, with reachable navigation and a live-total footer; the review step has direct Edit links. Older manual-price bookings still work.
 
 The financial printout uses an invoice-style booking-statement layout with quantity/rate/amount columns, a clear payments/balance summary, A4 pagination, mobile-friendly preview, and a compact-spacing option. Menu/service supporting details are separate from the billing page when present. It remains a **booking statement, not a statutory GST invoice**. Event-only printing excludes financial fields. Optional browser regression suite: `tests/wizard-print-ui.mjs`.
+
+### Provider settings and messaging credits
+
+SaaS owners can configure Razorpay, SMTP, MSG91 and Meta WhatsApp in **Settings**, and manage channel credits, recharge packs and allowances in **Messages & credits**. Venue owners have their own wallet, consent controls and reports. Apply migration `202609290005_messaging.sql` and follow [the messaging setup guide](docs/MESSAGING.md) before enabling dispatch. Real provider delivery and payments require live verification.
