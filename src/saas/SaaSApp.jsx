@@ -2,7 +2,8 @@ import React,{useEffect,useState,lazy,Suspense} from 'react';
 import {ArrowRight,ShieldCheck,Building2,LogOut} from 'lucide-react';
 import {Logo,Notice,Loading,PlanCards,Submit,Badge} from './components.jsx';
 import {saasApi,loadCheckout,currency,date} from './api.js';
-import PlatformDashboard from './PlatformDashboard.jsx';
+const Dashboard=lazy(()=>import('./PlatformDashboard.jsx'));
+function PlatformDashboard(props){return <Suspense fallback={<Loading/>}><Dashboard {...props}/></Suspense>;}
 import {previewPlans} from './preview.js';
 import {ThemeModeToggle} from '../Appearance.jsx';
 import './saas.css';
@@ -17,7 +18,7 @@ function SaaSApp({config,Workspace}){const [user,setUser]=useState(null),[loadin
  if(!user)return <PublicPage config={config} onLogin={refresh}/>;
  if(reset)return <AccountShell user={user} onLogout={logout}><ActionForm title="Set your password" fields={[['password','New password','password']]} endpoint="/auth/password" onDone={()=>{setReset(false);history.replaceState(null,'','/');}} submit="Save password"/></AccountShell>;
  if(user.mfaRequired)return <AccountShell user={user} onLogout={logout}><Mfa onDone={refresh}/></AccountShell>;
- if(user.platformAdmin)return <PlatformDashboard user={user} onLogout={logout}/>;
+ if(user.platformAdmin)return <PlatformDashboard user={user} onLogout={logout} config={config}/>;
  if(user.needsOnboarding)return <AccountShell user={user} onLogout={logout}><Onboarding config={config} onDone={refresh}/></AccountShell>;
  if(workspace&&user.organization?.status==='active'&&user.membershipStatus==='active')return <><div className="saas-workspace-strip"><span>{user.entitlement?.reason} · access until {date(user.entitlement?.expiresAt)}</span><button onClick={()=>setWorkspace(false)}>Organization & subscription</button></div><Workspace production initialUser={user} onSessionEnd={()=>{setWorkspace(false);refresh();}}/></>;
  return <AccountShell user={user} onLogout={logout}>{user.role==='owner'?<Billing config={config} onOpen={()=>setWorkspace(true)} onChanged={refresh}/>:<section className="saas-panel saas-account-panel"><h1>{user.organization?.name}</h1><p>Your role: {user.role}. Your organization owner manages the subscription.</p>{user.organization?.status!=='active'||user.membershipStatus!=='active'?<Notice error>Workspace access is suspended. Contact your organization owner.</Notice>:<button className="saas-button primary" onClick={()=>setWorkspace(true)}>Open workspace <ArrowRight size={16}/></button>}</section>}</AccountShell>;

@@ -154,3 +154,7 @@ The financial printout uses an invoice-style booking-statement layout with quant
 ### Provider settings and messaging credits
 
 SaaS owners can configure Razorpay, SMTP, MSG91 and Meta WhatsApp in **Settings**, and manage channel credits, recharge packs and allowances in **Messages & credits**. Venue owners have their own wallet, consent controls and reports. Apply migration `202609290005_messaging.sql` and follow [the messaging setup guide](docs/MESSAGING.md) before enabling dispatch. Real provider delivery and payments require live verification.
+
+### Compact dashboard and loading improvements
+
+See [Dashboard UI and loading changes](docs/DASHBOARD-UI.md) for the data-first overview, removed introductions, lazy-loaded workspace, chart definitions and measured bundle-size reduction. No additional migration is needed.

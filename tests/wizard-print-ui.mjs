@@ -15,7 +15,7 @@ try{
  for(const m of oldData.plans.filter(m=>m.name==='Wizard test menu'))await page.request.delete(root+'/api/pricing-models/'+m.id);
  const hall=await add('halls',{name:'Wizard test hall',type:'Indoor',capacity:300,price:50000,status:'Available'});
  const model=await add('pricing-models',{name:'Wizard test menu',mode:'combined',minimumPlates:100,vegRate:650,status:'Active',menus:[sampleMenus[0]],advancePercent:30,taxRate:5,terms:'Agreed venue and food services. Final attendance is subject to the minimum guarantee.'});
- await page.reload();await page.getByRole('button',{name:'Create a booking',exact:true}).click();
+ await page.reload();await page.getByRole('button',{name:'New booking',exact:true}).click();
  // An empty required name cannot be skipped with Continue or direct step navigation.
  await page.getByRole('button',{name:'Continue',exact:true}).click();assert.match(await activeStep(),/^Step 1:/);assert.ok(await page.locator('.modal [role="alert"]').first().isVisible());
  await step(4);assert.match(await activeStep(),/^Step 1:/);

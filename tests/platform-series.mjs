@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import {platformSeries} from '../shared/platform-series.js';
+const now=new Date('2027-01-15T00:00:00Z');
+const data={organizations:[{created_at:'2026-12-31T23:59:59Z'},{created_at:'2027-01-01T00:00:00Z'},{created_at:'2027-02-01'},{created_at:'bad'}],payments:[{captured_at:'2026-12-20',amount_paise:'125',currency:'INR'},{captured_at:'2027-01-02',amount_paise:500,currency:'INR'},{captured_at:'2027-01-02',amount_paise:999,currency:'USD'},{captured_at:'2027-01-30',amount_paise:999,currency:'INR'},{captured_at:'bad',amount_paise:999,currency:'INR'}]};
+const rows=platformSeries(data,3,now);assert.deepEqual(rows.map(r=>r.key),['2026-11','2026-12','2027-01']);assert.deepEqual(rows.map(r=>r.organizations),[0,1,1]);assert.deepEqual(rows.map(r=>r.revenue),[0,125,500]);assert.equal(platformSeries({},12,now).length,12);assert(platformSeries({},6,now).every(r=>r.revenue===0&&r.organizations===0));console.log('PASS platform charts: UTC/year boundaries, empty periods, exact paise, invalid/future records and currency isolation.');

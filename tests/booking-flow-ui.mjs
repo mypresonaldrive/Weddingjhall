@@ -13,7 +13,7 @@ try{
  const hall=await add('halls',{name:'Flow browser hall',price:50000,morningPrice:25000,type:'Indoor',capacity:500,status:'Available'});
  const model=await add('pricing-models',{name:'Flow browser menu',mode:'combined',minimumPlates:100,minimumFoodValue:100000,vegRate:650,jainRate:700,nonVegRate:900,mixedRate:850,status:'Active',advancePercent:30,taxRate:0,eventRates:[{eventType:'Seminar',vegRate:800}]});
  const service=await add('addons',{name:'Flow browser refreshments',category:'Catering',unit:'per guest',price:10,status:'Active'});
- await page.reload();await page.getByRole('button',{name:'Create a booking',exact:true}).click();
+ await page.reload();await page.getByRole('button',{name:'New booking',exact:true}).click();
  await page.getByLabel('Event name',{exact:true}).fill('Browser unified flow');
  await page.getByLabel('Event date',{exact:true}).fill('2027-01-20');
  await page.getByLabel('Marriage hall',{exact:true}).selectOption(hall.id);

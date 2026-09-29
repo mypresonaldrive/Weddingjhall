@@ -6,13 +6,13 @@ const context=await browser.newContext({viewport:{width:1440,height:1100}}),page
 const base=process.env.UI_TEST_URL||'http://localhost:3001';
 page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(base+'/platform');await page.getByRole('heading',{name:'A bigger picture. A clearer path.'}).waitFor();
+ await page.goto(base+'/platform');await page.getByRole('heading',{name:'Overview'}).waitFor();
  await page.screenshot({path:'/home/user/saas-platform-desktop.png',fullPage:true});
  await page.getByRole('button',{name:'Organizations',exact:false}).first().click();
  await page.getByRole('textbox',{name:'Search organizations'}).fill('Mithila');
  assert.equal(await page.locator('tbody tr').count(),1);
  await page.getByRole('button',{name:'Manage Mithila Banquets'}).click();await page.getByRole('dialog').waitFor();assert(await page.getByRole('button',{name:'Suspend access'}).isDisabled());await page.keyboard.press('Escape');
- await page.getByRole('button',{name:'Create plan',exact:true}).click();await page.getByLabel('Plan name').fill('Preview only');assert(await page.getByRole('button',{name:'Save plan'}).isDisabled());await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Subscription plans',exact:true}).click();await page.getByRole('button',{name:'Create plan',exact:true}).click();await page.getByLabel('Plan name').fill('Preview only');assert(await page.getByRole('button',{name:'Save plan'}).isDisabled());await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Switch to dark mode'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  assert.equal(await page.locator('.saas-app').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(25, 25, 38)');
  await page.getByRole('button',{name:'Switch to light mode'}).click();
