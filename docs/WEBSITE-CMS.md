@@ -65,3 +65,15 @@ Live Supabase Auth/MFA and production contact-form testing still require configu
 ## Assets
 
 `public/images/indian-palace-3d.webp` is an AI-generated, optimized illustration. Self-hosted Noto Sans Devanagari subsets are distributed under the SIL Open Font License; see `public/fonts/OFL-NotoSansDevanagari.txt`. English type continues using the project's existing font setup with system fallbacks. Hindi text does not depend on Google Fonts network access.
+
+
+## Public homepage visual refresh
+
+The homepage now uses a photo-led Indian celebration hero, illustrated venue-business cards, a hall/team plan finder, four onboarding steps, feature cards, accessible FAQ disclosures, CMS body copy, journal cards and a photo-backed CTA. This remains a **venue-owner software website**, not a public venue marketplace: no fake verified listings, availability search, reviews, customer counts or booking claims were added.
+
+- English and Hindi versions are supported. Existing CMS home title, summary, body, CTA label and SEO fields remain authoritative; unpublishing the home entry still hides the homepage content. Layout/capability copy and the new introductory FAQ are code-defined in `src/marketing/HomePage.jsx`, not new CMS fields.
+- The plan finder submits `halls` (1–100) and `team` (1–500) to the localized pricing page. Invalid/incomplete queries are ignored. Recommendations select the lowest-priced **published** plan satisfying both limits for the chosen monthly/yearly interval. No match results in an explicit message and contact link. Recommendations do not enroll customers or promise venue availability.
+- `wedding-hall-640.webp` and `wedding-hall-1280.webp` are AI-generated illustrative wedding-hall artwork, labelled as illustrative on the page. The large file is 1264 × 848 pixels (the filename is a size category); `srcset` uses its actual width. `home-banquet.webp`, `home-lawn.webp`, `home-multi.webp` are optimized crops of the repository's existing venue/garden/terrace photographs, not new venue listings.
+- Hero imagery has intrinsic dimensions, responsive source selection and high fetch priority. Below-fold card/story images are lazy-loaded. The subtle pointer tilt is disabled for touch/reduced motion. Mobile CTA art reuses the smaller image.
+- The live homepage no longer requests subscription prices: only the pricing route fetches `/api/public/plans`. Published content still uses the existing public CMS API and does not expose private venue records.
+- No migration, credentials or live provider changes are required. Tests: `npm run test:saas` (includes recommendation unit tests), `npm run test:marketing:ui` (CMS regression), and optional `npm run test:home:ui` (plan matching, locale routing, FAQ/menu, 320–1440px layouts and pricing-request isolation).

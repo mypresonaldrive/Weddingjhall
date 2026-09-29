@@ -7,7 +7,7 @@ page.on('pageerror',e=>errors.push(e.message));
 const noOverflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
 try{
  await page.goto(base+'/');await page.locator('.mk-hero h1').waitFor();
- assert(await page.locator('.mk-palace img').evaluate(e=>e.complete&&e.naturalWidth>0));
+ assert(await page.locator('.home-hero-photo img').evaluate(e=>e.complete&&e.naturalWidth>0));
  const ys=await page.locator('.mk-header>nav>a').evaluateAll(els=>els.map(e=>e.getBoundingClientRect().top));assert(Math.max(...ys)-Math.min(...ys)<3,'Desktop navigation must stay horizontal');
  await page.screenshot({path:'/home/user/marketing-home-desktop.png',fullPage:true});
  for(const route of ['/features','/pricing','/about','/contact','/faq','/blog','/blog/wedding-season-checklist']){await page.goto(base+route);await page.locator('.mk-page-heading h1').waitFor();await noOverflow();}
@@ -30,5 +30,5 @@ try{
  await page.goto(base+'/platform#cms');await page.locator('.cms-layout').waitFor();await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/home/user/marketing-cms-desktop.png',fullPage:true});
  // Leave the browser's preview pristine; mutations were confined to this test context.
  await page.evaluate(()=>localStorage.removeItem('gatherhall-cms-preview-v1'));
- assert.deepEqual(errors,[]);console.log('PASS marketing/CMS browser: desktop nav, 3D artwork, public routes, Hindi font, mobile layout, draft isolation, publish/unpublish, article CRUD, escaped HTML and unsent demo enquiries.');
+ assert.deepEqual(errors,[]);console.log('PASS marketing/CMS browser: desktop nav, photo-led hero, public routes, Hindi font, mobile layout, draft isolation, publish/unpublish, article CRUD, escaped HTML and unsent demo enquiries.');
 }finally{await browser.close();}

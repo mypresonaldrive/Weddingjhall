@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';
+import {requestedCapacity,recommendPlan} from '../shared/plan-recommendation.js';
+assert.deepEqual(requestedCapacity('?halls=2&team=5'),{halls:2,team:5});
+for(const s of ['', '?halls=-1&team=5','?halls=1&team=0','?halls=1000&team=5','?halls=1&team=501','?halls=NaN&team=5','?halls=2.5&team=5','?halls=2','?halls=<script>&team=2'])assert.equal(requestedCapacity(s),null);
+const plans=[{id:'draft',published:false,max_halls:50,max_staff:100,monthly_paise:1,yearly_paise:1},{id:'small',published:true,max_halls:1,max_staff:2,monthly_paise:100,yearly_paise:1000},{id:'mid',published:true,max_halls:3,max_staff:10,monthly_paise:200,yearly_paise:2200},{id:'large',published:true,max_halls:10,max_staff:50,monthly_paise:300,yearly_paise:2000}];
+assert.equal(recommendPlan(plans,{halls:2,team:5}),'mid');assert.equal(recommendPlan(plans,{halls:2,team:5},'yearly'),'large');assert.equal(recommendPlan(plans,{halls:100,team:500}),null);assert.equal(recommendPlan([], {halls:1,team:1}),null);assert.equal(recommendPlan(plans,null),null);assert.equal(plans[0].id,'draft');console.log('PASS plan finder: bounded input, published-only capacity matching, monthly/yearly lowest price, no matches and stable source ordering.');

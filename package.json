@@ -8,14 +8,15 @@
     "start": "NODE_ENV=production node server.js",
     "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs && node tests/booking-flow.mjs",
     "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs",
-    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs && node tests/platform-series.mjs",
+    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs && node tests/platform-series.mjs && node tests/plan-recommendation.mjs",
     "test:saas:http": "npm run build && node tests/saas-http.mjs",
     "test:saas:ui": "node tests/saas-ui.mjs",
     "test:marketing:ui": "node tests/marketing-ui.mjs",
     "test:messaging": "node tests/messaging.mjs && node tests/messaging-worker.mjs && node tests/messaging-http.mjs",
     "test:messaging:ui": "node tests/messaging-ui.mjs",
     "test:settings:ui": "node tests/settings-ux.mjs",
-    "test:dashboard:ui": "node tests/dashboard-ui.mjs"
+    "test:dashboard:ui": "node tests/dashboard-ui.mjs",
+    "test:home:ui": "node tests/home-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
