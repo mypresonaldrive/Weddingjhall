@@ -2,6 +2,10 @@
 
 A marriage-hall management app with separate Supabase-backed SaaS and disposable SQLite demo modes. Includes organization subscriptions with hall limits, a platform administration dashboard, and Razorpay integration. Live Supabase/SMTP/payment acceptance testing is still required before customer launch.
 
+## First-time Supabase setup
+
+Start with the [step-by-step Supabase SaaS setup guide](docs/SUPABASE-FIRST-TIME.md). It covers the dashboard, migrations, private server environment settings, email verification, your first platform-admin account, MFA, CMS publication and the first venue-owner subscription. The existing frontend calls Express; do **not** put a Supabase secret/service-role key in React or `VITE_*` variables.
+
 ## Run
 
 Requires Node.js 22.13+ (uses built-in `node:sqlite`).
@@ -11,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open port **3000**. The server binds to `0.0.0.0` and supports proxied preview hosts. The first visit opens the seeded owner demo; signing out opens the authentication screen. New workspace registration creates a separate, empty organization.
+Open port **3000**. The server binds to `0.0.0.0` and supports proxied preview hosts. The first visit opens the bilingual public website. Visit `/workspace` for the seeded venue demo or `/platform#cms` for the interactive local CMS preview. Demo data and browser-local CMS edits are not production storage.
 
 ```sh
 npm run build
@@ -28,6 +32,10 @@ APP_MODE=saas npm start
 - Razorpay checkout verification, signed lifecycle webhooks and uncertain-checkout reconciliation.
 - `npm run test:saas`: local SQL/security/signature tests. `npm run test:deployment`: isolated demo regression suite.
 - Seed subscription prices are draft illustrations, not approved live offers.
+
+## Public website & CMS
+
+Indian-inspired lavender/ivory landing page with a 3D architectural illustration, English/Hindi pages, journal, and platform-owner editorial CMS. Save drafts, preview, publish, restore revisions and manage contact enquiries. Legal templates start unpublished. See [the CMS guide](docs/WEBSITE-CMS.md) for routes, migration, security, local-preview behavior and limitations.
 
 ## Light periwinkle UI & booking improvements
 

@@ -8,9 +8,10 @@
     "start": "NODE_ENV=production node server.js",
     "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs && node tests/booking-flow.mjs",
     "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs",
-    "test:saas": "node tests/saas-core.mjs && node tests/saas-database.mjs",
+    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs",
     "test:saas:http": "npm run build && node tests/saas-http.mjs",
-    "test:saas:ui": "node tests/saas-ui.mjs"
+    "test:saas:ui": "node tests/saas-ui.mjs",
+    "test:marketing:ui": "node tests/marketing-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

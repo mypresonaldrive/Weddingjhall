@@ -8,7 +8,7 @@ page.on('pageerror',e=>errors.push(e.message));
 const expanded=()=>page.locator('#sidebar-toggle').getAttribute('aria-expanded');
 const expectExpanded=async value=>{await page.waitForFunction(value=>document.getElementById('sidebar-toggle')?.getAttribute('aria-expanded')===value,value);assert.equal(await expanded(),value);};
 try{
- await page.goto(process.env.UI_TEST_URL||'http://localhost:3000');
+ await page.goto((process.env.UI_TEST_URL||'http://localhost:3000')+'/workspace');
  await page.locator('#sidebar-toggle').waitFor();
  await expectExpanded('true');
  await page.getByRole('button',{name:'Collapse sidebar',exact:true}).click();

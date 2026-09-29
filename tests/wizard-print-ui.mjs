@@ -10,7 +10,7 @@ async function add(kind,body){const r=await page.request.post(root+'/api/'+kind,
 const step=async n=>{await page.getByRole('button',{name:new RegExp('^Step '+n+':')}).click();};
 const activeStep=()=>page.locator('.booking-stepper [aria-current="step"]').getAttribute('aria-label');
 try{
- await page.goto(root);await page.locator('#sidebar-toggle').waitFor();
+ await page.goto(root+'/workspace');await page.locator('#sidebar-toggle').waitFor();
  const oldData=await (await page.request.get(root+'/api/data')).json();for(const b of oldData.bookings.filter(b=>b.name==='Mobile draft preserved'))await page.request.delete(root+'/api/bookings/'+b.id);for(const h of oldData.halls.filter(h=>h.name==='Wizard test hall'))await page.request.delete(root+'/api/halls/'+h.id);
  for(const m of oldData.plans.filter(m=>m.name==='Wizard test menu'))await page.request.delete(root+'/api/pricing-models/'+m.id);
  const hall=await add('halls',{name:'Wizard test hall',type:'Indoor',capacity:300,price:50000,status:'Available'});

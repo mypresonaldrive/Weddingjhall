@@ -9,7 +9,7 @@ async function add(kind,body){const r=await page.request.post(root+'/api/'+kind,
 const go=async n=>{await page.getByRole('button',{name:new RegExp('^Step '+n+':')}).click();await page.locator(`[data-booking-step="${n-1}"]`).waitFor({state:'visible'});};
 const waitTotal=async total=>{await page.waitForFunction(total=>document.querySelector('.quote-total strong')?.textContent===total,total);};
 try{
- await page.goto(root);await page.locator('#sidebar-toggle').waitFor();
+ await page.goto(root+'/workspace');await page.locator('#sidebar-toggle').waitFor();
  const hall=await add('halls',{name:'Flow browser hall',price:50000,morningPrice:25000,type:'Indoor',capacity:500,status:'Available'});
  const model=await add('pricing-models',{name:'Flow browser menu',mode:'combined',minimumPlates:100,minimumFoodValue:100000,vegRate:650,jainRate:700,nonVegRate:900,mixedRate:850,status:'Active',advancePercent:30,taxRate:0,eventRates:[{eventType:'Seminar',vegRate:800}]});
  const service=await add('addons',{name:'Flow browser refreshments',category:'Catering',unit:'per guest',price:10,status:'Active'});

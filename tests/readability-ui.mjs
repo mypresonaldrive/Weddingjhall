@@ -6,7 +6,7 @@ const browser=await pw.launch({executablePath:await chromium.executablePath(),ar
 const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(process.env.UI_TEST_URL||'http://localhost:3000');
+ await page.goto((process.env.UI_TEST_URL||'http://localhost:3000')+'/workspace');
  await page.getByRole('button',{name:'Pricing models',exact:true}).waitFor();
  await page.screenshot({path:'/home/user/readability-dashboard.png'});
  await page.getByRole('button',{name:'Pricing models',exact:true}).click();

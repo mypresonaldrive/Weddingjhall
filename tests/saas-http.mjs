@@ -11,10 +11,13 @@ try{
  const cookie=config.headers.get('set-cookie').split(';')[0],csrf=cookie.split('=')[1];
  assert.equal((await fetch(base+'/api/auth/me')).status,401);
  assert.equal((await fetch(base+'/api/platform/overview')).status,401);
+ for(const path of ['/api/platform/cms','/api/platform/enquiries'])assert.equal((await fetch(base+path)).status,401);
  const post=(path,headers={},body={})=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
  assert.equal((await post('/api/auth/login')).status,403);
  assert.equal((await post('/api/auth/login',{Cookie:cookie,'X-CSRF-Token':csrf,Origin:'https://evil.example'})).status,403);
  assert.equal((await post('/api/auth/login',{Cookie:cookie,'X-CSRF-Token':'é'.repeat(48)})).status,403);
+ assert.equal((await post('/api/platform/cms/save',{Cookie:cookie,'X-CSRF-Token':csrf,Origin:env.APP_URL})).status,401);
+ assert.equal((await post('/api/public/enquiries')).status,403);
  assert.equal((await post('/api/platform/plans',{Cookie:cookie,'X-CSRF-Token':csrf,Origin:env.APP_URL})).status,401);
  assert.equal((await post('/api/webhooks/razorpay',{'X-Razorpay-Signature':'0'.repeat(64)},{event:'subscription.activated'})).status,401);
  assert.equal((await fetch(base+'/platform')).status,200);

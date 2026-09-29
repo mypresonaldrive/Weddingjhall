@@ -1,5 +1,7 @@
 # Gatherhall SaaS deployment: Supabase + Razorpay
 
+New to Supabase? Start with [the first-time setup walkthrough](SUPABASE-FIRST-TIME.md), then use this document as the deployment/release checklist.
+
 ## Status and boundaries
 
 This is a production-oriented implementation, **not a live-certified deployment**. Local migration/business-rule tests and demo regressions are separate from real Supabase Auth, SMTP, Razorpay Checkout/webhook and Docker verification. Complete the acceptance checklist below before onboarding customers. The default draft prices are illustrative and need operator approval.
@@ -97,3 +99,7 @@ The local SQL suite covers platform AAL1/AAL2 metadata isolation, denial of plat
 Optional browser checks require `playwright-core` and `@sparticuz/chromium` installed locally (`npm install --no-save --package-lock=false playwright-core @sparticuz/chromium`) and a demo server. Run `UI_TEST_URL=http://localhost:3001 npm run test:saas:ui`. Chromium shared-library requirements depend on the host OS. Browser dependencies are not shipped in the runtime image.
 
 The repository includes `.github/workflows/ci.yml` to run these local checks on pushes and pull requests with Node 22 and read-only repository permissions. No live service credentials are used by CI. A passing CI run is a regression gate, not a live deployment certification.
+
+## Public website and CMS
+
+The public home now lives at `/`, with English/Hindi pages, journal and a platform-owner CMS at `/platform#cms`. The old demo workspace is at `/workspace`. Apply follow-up migration `202609290004_website_cms.sql` and read [the website/CMS guide](WEBSITE-CMS.md). Review and publish real legal policies before opening contact enquiries. The CMS has separate draft/public snapshots and MFA-restricted access; the demo editor uses this browser's localStorage only, not production storage.

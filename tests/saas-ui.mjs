@@ -18,8 +18,8 @@ try{
  await page.getByRole('button',{name:'Switch to light mode'}).click();
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Open platform navigation'}).click();await page.getByRole('button',{name:'Overview',exact:true}).click();
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'/home/user/saas-platform-mobile.png',fullPage:true});
- await page.goto(base+'/pricing');await page.getByRole('heading',{name:/Room for your business/}).waitFor();
- await page.getByRole('button',{name:'Preview registration'}).first().click();await page.getByRole('heading',{name:'Create your owner account'}).waitFor();assert(await page.getByRole('button',{name:'Create account',exact:true}).isDisabled());
+ await page.goto(base+'/pricing');await page.getByRole('heading',{name:/One organization/}).waitFor();
+ assert(await page.getByText('DESIGN PREVIEW · Sample content and illustrative plans. No live payments.',{exact:true}).count()>0);assert.equal(await page.getByRole('button',{name:'Create account',exact:true}).count(),0);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.screenshot({path:'/home/user/saas-owner-mobile.png',fullPage:true});
  // Browser-side production mode smoke: no demo auto-login, public registration, explicit MFA gate.
