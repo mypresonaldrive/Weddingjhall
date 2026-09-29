@@ -1,6 +1,6 @@
 # Gatherhall
 
-A full-stack, multi-tenant marriage hall management application with a responsive React dashboard, Express API, and persistent SQLite storage.
+A marriage-hall management app with separate Supabase-backed SaaS and disposable SQLite demo modes. Includes organization subscriptions with hall limits, a platform administration dashboard, and Razorpay integration. Live Supabase/SMTP/payment acceptance testing is still required before customer launch.
 
 ## Run
 
@@ -15,8 +15,19 @@ Open port **3000**. The server binds to `0.0.0.0` and supports proxied preview h
 
 ```sh
 npm run build
-npm start
+# Configure runtime secrets from .env.example via your deployment environment first.
+APP_MODE=saas npm start
 ```
+
+## SaaS platform
+
+- `/platform`: authenticated platform console in SaaS mode; clearly labelled sample-data design preview in demo mode.
+- `/pricing`: owner plans and registration; organization-level subscriptions, not per-hall billing.
+- Plans, tenant suspension/restoration, audit history, gross collection ledger and estimated MRR.
+- Verified-email auth, HttpOnly cookies, CSRF, platform MFA, RLS and atomic business-rule RPCs.
+- Razorpay checkout verification, signed lifecycle webhooks and uncertain-checkout reconciliation.
+- `npm run test:saas`: local SQL/security/signature tests. `npm run test:deployment`: isolated demo regression suite.
+- Seed subscription prices are draft illustrations, not approved live offers.
 
 ## Light periwinkle UI & booking improvements
 
@@ -52,7 +63,7 @@ docker compose up --build -d
 
 **Coolify:** choose the Dockerfile build pack, `/Dockerfile`, application port `3000`, and health check `GET /healthz`. See [the full deployment guide](docs/COOLIFY.md).
 
-**Temporary database only:** no SQLite volume is configured, as Supabase migration is planned. Recreating the container resets local data. Demo access remains enabled; do not use this deployment for real customer data until the database and production authentication setup are ready.
+**Production uses Supabase now.** Set runtime secrets and apply the new-project migration before deployment. Production never falls back to SQLite. See the deployment guide for administrator MFA bootstrap, Razorpay setup, explicit invitation acceptance, backups, known limits and the pre-launch verification checklist.
 
 ## Demo accounts
 

@@ -7,17 +7,24 @@
     "build": "vite build",
     "start": "NODE_ENV=production node server.js",
     "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs && node tests/booking-flow.mjs",
-    "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs"
+    "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs",
+    "test:saas": "node tests/saas-core.mjs && node tests/saas-database.mjs",
+    "test:saas:http": "npm run build && node tests/saas-http.mjs",
+    "test:saas:ui": "node tests/saas-ui.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
+    "helmet": "^8.3.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "vite": "^6.1.0"
   },
   "engines": {

@@ -19,7 +19,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force \
     && mkdir -p /app/data && chown node:node /app/data
 COPY --from=build /app/dist ./dist
-COPY server.js ./
+COPY server.js server.demo.js ./
+COPY server ./server
 COPY shared ./shared
 USER node
 EXPOSE 3000

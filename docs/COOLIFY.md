@@ -1,88 +1,99 @@
-# Deploy Gatherhall on Coolify
+# Gatherhall SaaS deployment: Supabase + Razorpay
 
-## Scope of this setup
+## Status and boundaries
 
-This adds a Docker deployment, **not a Supabase migration**. The existing SQLite-backed demo continues to run temporarily. There is deliberately no database volume in the supplied Compose file.
+This is a production-oriented implementation, **not a live-certified deployment**. Local migration/business-rule tests and demo regressions are separate from real Supabase Auth, SMTP, Razorpay Checkout/webhook and Docker verification. Complete the acceptance checklist below before onboarding customers. The default draft prices are illustrative and need operator approval.
 
-**Important:** recreating/redeploying the container loses its local accounts, bookings, payments, and sessions. Demo fixtures are seeded again on the next empty-container start. A simple process/container restart preserves the writable layer; replacing the container does not. Do not store real customer data in this deployment until Supabase is integrated.
+Production defaults to `APP_MODE=saas` and fails startup without Supabase credentials and an HTTPS `APP_URL`. SQLite exists only in the explicitly isolated demo. There is no automatic migration of demo accounts or records into real organizations.
 
-Demo credentials and automatic demo-owner sign-in are still enabled. Use this deployment as a demo/staging environment, not a production service containing private information. No Supabase secrets are needed yet.
+One organization per user is currently supported; multiple halls belong to that organization. Existing subscriptions retain price/limit snapshots. Self-service plan upgrades, replacements after a terminal canceled mandate, proration, refunds, accounting/tax invoices, automated delinquency email and multi-organization switching are **not implemented**. Do not advertise these features. Contact support for changes; never edit entitlements to simulate payment.
 
-## Recommended: Coolify Dockerfile build pack
+## 1. New Supabase project
 
-1. Add an application using this GitHub repository.
-2. Select branch `arena/01a0e5a2-weddingjhall` (or merge it before selecting your deployment branch).
-3. Choose the **Dockerfile** build pack.
-4. Set the base directory to `/` and Dockerfile location to `/Dockerfile`.
-5. Set **Ports Exposes** / application port to **3000**. You do not need a host port mapping; Coolify's reverse proxy handles public traffic.
-6. Add your domain with `https://` and let Coolify provision TLS.
-7. If configuring a health check in Coolify, use HTTP `GET /healthz`, port `3000`, expected status `200`. The image also includes its own Docker health check.
-8. Leave persistent storage empty for this temporary deployment.
-9. Deploy. No custom install, build, or start command is needed.
+Use a **dedicated new project**, not a project hosting unrelated apps. Apply all files in `supabase/migrations/` in filename order, once each through versioned Supabase migrations / SQL administration. It revokes public-schema privileges broadly and is not intended to be rerun without migration tracking. The initial migration creates tenant RLS, service-only mutation RPCs, auth-profile trigger, platform administration, audit, subscription snapshots and billing ledger.
 
-The image builds the React app once and serves its static files and API from one Express process. Browser API requests use relative URLs, so the domain works without CORS or a separate backend URL. Vite's dev server is not running in the container.
+Browser writes and sensitive RPC execution are revoked. The service-role key is server-only. The server verifies Supabase users, applies actor authorization, checks platform AAL2, then calls privileged business RPCs. Platform admins can inspect tenant metadata and SaaS billing, not automatically read tenant customer/booking records.
 
-### Runtime environment
+Enable email confirmation. Configure custom SMTP, sender/domain verification, production Site URL and redirect allowlist for your exact HTTPS domain. Test delivery, expiry and abuse limits. Configure Turnstile secret in Supabase Auth if using `TURNSTILE_SITE_KEY` in the app.
 
-| Variable | Image default | Purpose |
-| --- | --- | --- |
-| `NODE_ENV` | `production` | Serves the compiled browser app. Keep this value in Docker. |
-| `PORT` | `3000` | HTTP listen port, bound on `0.0.0.0`. Match Coolify's exposed port if changed. |
-| `DATA_DIR` | `/app/data` | Temporary location for the current database. Not a Supabase setting. |
+Recommended confirmation-template links use token hashes, for example:
 
-Run one replica. The current SQLite database is local to a container and must not be used as a shared database across replicas.
-
-The runtime runs as the unprivileged `node` user (UID/GID 1000). Any custom mount to `DATA_DIR` must be writable by that user. No storage mount is required by this configuration.
-
-## Local Docker smoke test
-
-```sh
-docker compose up --build -d
-curl --fail http://localhost:3000/healthz
-docker compose ps
-docker compose logs -f gatherhall
+```
+https://YOUR_DOMAIN/auth/confirm?token_hash={{ .TokenHash }}&type=signup
+https://YOUR_DOMAIN/auth/confirm?token_hash={{ .TokenHash }}&type=recovery
+https://YOUR_DOMAIN/auth/confirm?token_hash={{ .TokenHash }}&type=invite
 ```
 
-Open http://localhost:3000. If port 3000 is occupied:
+Set each template to the matching type. The default implicit-token flow is also supported: the browser exchanges the fragment tokens for HttpOnly cookies and immediately clears the fragment. Invites never silently attach an account: after verifying email and setting a password, the recipient must explicitly accept the named organization's invitation. Existing users can sign in to view a pending invitation even if Supabase declines a repeat invite email.
 
-```sh
-APP_PORT=3001 docker compose up --build -d
-curl --fail http://localhost:3001/healthz
+### Follow-up migrations for an existing installation
+
+If `202609290001_saas.sql` is already applied, apply only the unapplied migrations:
+
+- `202609290002_atomic_validation.sql`: rechecks positive payments, booking totals, guest capacity, maintenance restrictions and valid time windows under the organization write lock. Also preserves the original trial deadline while a provider mandate is awaiting paid activation.
+- `202609290003_invitation_locking.sql`: serializes invitation creation/acceptance with directory mutations and suspension; invalid, expired, changed-email and inactive-directory invitations cannot grant access.
+
+Back up first. The migration does not rewrite historical booking bodies. Existing malformed legacy records should be audited before launch; do not weaken validation to bypass them. The SQL test runner applies **all** migration files in order.
+
+## 2. Bootstrap a platform administrator
+
+Register an ordinary verified user using the public signup flow. Using the Supabase SQL administrator, look up the intended verified user's ID and insert it explicitly:
+
+```sql
+insert into public.platform_admins(user_id)
+values ('REPLACE_WITH_VERIFIED_AUTH_USER_UUID');
 ```
 
-Stop and remove the container (this also discards its temporary database):
+There is no public role-selection or admin-registration endpoint. Sign in at `/platform`, enroll a TOTP authenticator, then verify a six-digit code. Keep recovery procedures restricted to trusted operators with Supabase administrative access. Do not insert demo users.
 
-```sh
-docker compose down
-```
+## 3. Razorpay subscriptions
 
-Alternatively:
+Enable Razorpay Subscriptions for your approved merchant account and configure all three runtime secrets: key ID, key secret, webhook secret. Test and live environments must use separate Supabase projects/keys. Production-node staging with test credentials requires `ALLOW_TEST_BILLING=true`; its UI explicitly labels test billing. Never count test payments as real revenue.
 
-```sh
-docker build -t gatherhall .
-docker run --rm --name gatherhall -p 3000:3000 gatherhall
-```
+Webhook URL: `https://YOUR_DOMAIN/api/webhooks/razorpay`. Configure subscription lifecycle events including authenticated, activated, charged, pending, halted, resumed, cancelled, completed and updated events supported by your provider account. The endpoint validates HMAC over raw bytes, deduplicates event IDs, and fetches current provider state. Captured collections enter the ledger from signed `subscription.charged` events only. Access is based on verified active periods, not an arbitrary client success flag.
 
-## Supabase later
+Checkout creates a provider plan from the organization's immutable snapshot and acquires a database creation lease. Checkout signatures bind `payment_id|stored_subscription_id`. A timeout after provider creation leaves checkout `uncertain`; **never blindly reset this state**. In Platform → Organizations → manage organization, enter the existing provider subscription ID. Reconciliation verifies organization/lease notes, INR price, quantity and cadence before linking it. If no provider subscription can be found, escalate for manual investigation; an automatic reset is intentionally unavailable.
 
-No placeholder credentials or nonfunctional Supabase client are added. When ready, migrate the server's database queries, schema, ownership checks, and session storage; import any data you need to preserve; then configure the required secrets in Coolify's runtime environment. Never expose a Supabase service-role key to the browser or bake secrets into the image.
+Owner cancellation requests end-of-cycle cancellation and preserves earned access. Suspending a tenant only blocks workspace access; it does not cancel billing. Refunds, disputes, provider fees and settlements require provider-side reconciliation. Dashboard MRR is estimated and gross collections are not net revenue.
 
-Until that migration is complete, setting a Supabase URL alone will **not** switch the application's storage backend.
+## 4. Coolify / Docker
 
-## Container behavior
+Select this repository/branch, Dockerfile build, internal port `3000`. Configure an HTTPS domain, route it to port 3000 and set `/healthz` as health-check path. Set runtime secrets from `.env.example` in Coolify; no secrets belong in Git, Vite build variables, screenshots or chat. `TRUST_PROXY=1` is appropriate only behind exactly one trusted ingress proxy. Ensure direct public access to the container port cannot bypass that proxy.
 
-- Multi-stage Node 22 build; dependencies installed with `npm ci`.
-- Production dependency installation omits Vite and build tooling.
-- Local databases, Git metadata, and `.env` files are excluded from the build context.
-- Public health check verifies the process can query the database without exposing data.
-- `SIGTERM` / `SIGINT` stops accepting requests, drains existing requests, and closes SQLite; a 10-second deadline prevents hung deployments.
-- Coolify should terminate TLS at its proxy; the internal container endpoint remains HTTP.
+Required: `APP_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Set Razorpay values together before publishing plans / opening onboarding. Set a strong `RATE_LIMIT_SECRET`. Start with `REGISTRATION_ENABLED=false` until ready (existing users can log in). The Docker image includes the production server and separately guarded demo entry. All durable SaaS data is in Supabase; do not mount a production SQLite volume.
 
-## Automated pre-deployment checks
+For Compose: copy `.env.example` to ignored `.env`, fill values privately, then `docker compose up --build -d`. Docker was not available in the development sandbox, so image execution still needs verification. Outbound HTTPS to Supabase and Razorpay must be allowed. Production uses frame-ancestor restrictions to prevent clickjacking; operate on the configured domain, not an embedded preview iframe.
 
-```sh
-npm ci
-npm run test:deployment
-```
+## 5. Publish your plans
 
-This builds the frontend and starts an isolated production server using a temporary data directory and free port. It tests static assets, readiness, the full API suite, graceful shutdown, and session/data persistence across process restarts, then removes the test data. It does not replace an actual Docker image build/smoke test.
+In Platform → Subscription plans, edit the draft Starter/Growth/Scale offers and approve prices, hall limits, active-staff quotas, trial days and tax treatment before publishing. These software subscription plans are distinct from the venue's event pricing models and food menus. Publish/unpublish affects new signups; it does not rewrite existing contracts.
+
+The `REGISTRATION_ENABLED=false` gate blocks both public account creation and new organization onboarding; existing invitation acceptance remains available. Set `REGISTRATION_ENABLED=true` when legal pages, support, SMTP and payment tests are complete. New organization onboarding is blocked if Razorpay is not configured. Trials require explicit plan selection but do not create automatic charges. Owners initiate their recurring mandate separately from the organization account screen.
+
+## 6. Mandatory release checks
+
+- Run `npm run build`, `npm run test:saas`, `npm run test:saas:http`, and `npm run test:deployment` (the latter is the isolated legacy/demo regression suite, not a real SaaS E2E test).
+- Two real Supabase accounts/organizations: verify signup confirmation, logout, refresh, password recovery, explicit invitations, inactive membership and cross-tenant reads/writes with both API and direct RLS access.
+- Admin password-only session must fail platform API/RLS. Verify MFA setup, challenge, expiry, and controlled administrator recovery.
+- Razorpay sandbox: first activation, verified checkout, repeated/out-of-order webhooks, failed payment/retry, expired trial, captured ledger, cancellation, suspension and uncertain-create reconciliation. Confirm no duplicate recurring mandate under concurrent attempts.
+- Complete a low-value live activation and end-of-cycle cancellation under the provider's permitted testing procedures before declaring live payments working.
+- Test booking menus/snapshots, quotes, conflicts, customer-payment floors, printable full/event copies and role restrictions in a real SaaS tenant. These have local SQL and legacy regressions, not yet a live provider integration certification.
+- Verify mobile keyboard/focus behavior, email templates/delivery, TLS/cookie settings, CSP with Razorpay/Turnstile, health checks, restart and trusted-proxy rate limiting.
+- Schedule independent backups, test restore and verify your Supabase tier's limits, pausing policy and recovery capabilities. A free tier must not be assumed to include a production backup/SLA.
+- Monitor failed webhooks, expired trials, uncertain checkouts, auth failures, Supabase quotas and ledger reconciliation. Archive audit/rate data under an agreed retention policy.
+
+## Known scale limits
+
+Workspace reads currently load the tenant's directory and bookings into memory; write validation uses this compatibility snapshot plus atomic SQL invariants. Large-tenant/server-side filtering and pagination need scale testing. Platform overview loads at most 1,000 rows per dataset and explicitly flags truncated metrics. The availability lookup must also be load-tested for large booking datasets. Do not present these windowed figures as audited lifetime totals.
+
+## Safe design preview
+
+`APP_MODE=demo npm run dev` starts disposable sample data. Visit `/platform` for the labelled platform-console design preview or `/pricing` for owner signup design. Administrative mutations, registration and payments are disabled in these previews. For a built demo set `APP_MODE=demo ALLOW_DEMO=true NODE_ENV=production`; never use this mode for real customer records.
+
+## Local regression coverage added during hardening
+
+The local SQL suite covers platform AAL1/AAL2 metadata isolation, denial of platform access to tenant records, service-only RPC permissions, stale-capacity rejection at the database write boundary, positive payments, null/negative totals, SQL/JavaScript booking-window parity, expired/inactive/changed-email invitations, original trial preservation, stale provider observations and repeated payment IDs. These are deterministic local checks, not proof of live Supabase or Razorpay behavior and not a multi-process load test.
+
+Optional browser checks require `playwright-core` and `@sparticuz/chromium` installed locally (`npm install --no-save --package-lock=false playwright-core @sparticuz/chromium`) and a demo server. Run `UI_TEST_URL=http://localhost:3001 npm run test:saas:ui`. Chromium shared-library requirements depend on the host OS. Browser dependencies are not shipped in the runtime image.
+
+The repository includes `.github/workflows/ci.yml` to run these local checks on pushes and pull requests with Node 22 and read-only repository permissions. No live service credentials are used by CI. A passing CI run is a regression gate, not a live deployment certification.

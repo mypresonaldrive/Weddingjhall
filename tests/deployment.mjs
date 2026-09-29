@@ -17,7 +17,7 @@ const base = `http://127.0.0.1:${port}`;
 let child, exited, logs = '';
 async function start() {
  child = spawn(process.execPath, ['server.js'], {
-  env: { ...process.env, NODE_ENV: 'production', PORT: String(port), DATA_DIR: dir },
+  env: { ...process.env, NODE_ENV: 'production', APP_MODE:'demo', ALLOW_DEMO:'true', PORT: String(port), DATA_DIR: dir },
   stdio: ['ignore', 'pipe', 'pipe'],
  });
  exited = new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));

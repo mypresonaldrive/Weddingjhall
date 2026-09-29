@@ -1,0 +1,26 @@
+name: Application checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Apply all migrations and test SaaS invariants
+        run: npm run test:saas
+      - name: Production HTTP security smoke tests (no live services)
+        run: npm run test:saas:http
+      - name: Booking, pricing, auth, printing and deployment regressions
+        run: npm run test:deployment
