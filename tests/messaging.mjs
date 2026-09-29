@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {encryptConfig,decryptConfig,validateConfig,sendProvider} from '../server/integrations.js';
+import {encryptConfig,decryptConfig,validateConfig,sendProvider,encryptionReady} from '../server/integrations.js';
 process.env.INTEGRATION_ENCRYPTION_KEY=randomBytes(32).toString('base64');
+assert(encryptionReady());
+assert.throws(()=>validateConfig('razorpay',{keyId:'login@example.test'},false),/not your login email/);
 const encrypted=encryptConfig('email',{password:'not-a-real-secret'});
 assert(!encrypted.includes('not-a-real-secret'));assert.equal(decryptConfig('email',encrypted).password,'not-a-real-secret');
 assert.throws(()=>decryptConfig('sms',encrypted));const altered=Buffer.from(encrypted,'base64');altered[30]^=1;assert.throws(()=>decryptConfig('email',altered.toString('base64')));
@@ -13,7 +15,7 @@ assert.throws(()=>validateConfig('sms',{},true));
 assert.throws(()=>validateConfig('sms',{authKey:'x',flowId:'approvedflow',approved:'false'},true),/Confirm provider template approval/);
 assert.equal(validateConfig('sms',{authKey:'x',flowId:'approvedflow',approved:'true'},true).approved,'true');
 const originalFetch=global.fetch;
-try{global.fetch=async()=>new Response(JSON.stringify({messages:[{id:'provider-1'}]}),{status:200});assert.equal((await sendProvider('whatsapp',{phoneId:'123',token:'x',template:'booking',language:'en'},'+919999999999','hello')).outcome,'sent');global.fetch=async()=>new Response('{}',{status:400});assert.equal((await sendProvider('whatsapp',{},'+919999999999','hello')).outcome,'failed');global.fetch=async()=>{throw Error('timeout');};assert.equal((await sendProvider('sms',{},'+919999999999','hello')).outcome,'unknown');}finally{global.fetch=originalFetch;}
+try{global.fetch=async()=>new Response(JSON.stringify({messages:[{id:'provider-1'}]}),{status:200});assert.equal((await sendProvider('whatsapp',{phoneId:'123',token:'x',template:'booking',language:'en'},'+919999999999','hello')).outcome,'sent');global.fetch=async()=>new Response('{}',{status:400});assert.equal((await sendProvider('whatsapp',{},'+919999999999','hello')).outcome,'failed');global.fetch=async()=>new Response('{}',{status:200});assert.equal((await sendProvider('whatsapp',{},'+919999999999','hello')).outcome,'unknown');assert.equal((await sendProvider('sms',{},'+919999999999','hello')).outcome,'unknown');global.fetch=async()=>new Response(JSON.stringify({type:'error'}),{status:200});assert.equal((await sendProvider('sms',{},'+919999999999','hello')).outcome,'failed');global.fetch=async()=>{throw Error('timeout');};assert.equal((await sendProvider('sms',{},'+919999999999','hello')).outcome,'unknown');}finally{global.fetch=originalFetch;}
 const db=new PGlite();
 await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create function auth.jwt() returns jsonb language sql as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;grant usage on schema auth to anon,authenticated,service_role;grant execute on function auth.uid(),auth.jwt() to anon,authenticated,service_role;`);
 for(const file of (await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort())await db.exec(await readFile('supabase/migrations/'+file,'utf8'));

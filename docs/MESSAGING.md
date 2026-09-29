@@ -109,3 +109,17 @@ npm run test:deployment
 ```
 
 Optional browser tests (same optional Playwright/Chromium dependencies as other UI suites): `npm run test:messaging:ui`. Covers platform settings, credit controls, responsive screens, owner consent navigation, dark mode and safe disabled demo actions.
+
+
+## Settings and reporting usability update
+
+- Provider selectors now open one focused editor. Badges distinguish **not configured**, **saved enabled/disabled** and **unsaved changes**. Razorpay's running mode and restart requirement are shown separately; no badge claims that provider delivery is verified.
+- Encryption readiness validates a base64 32-byte key, not just a nonempty environment variable. Fields remain locked until ready. Inline setup instructions include a command to run privately; the application does not generate or display the actual encryption key.
+- Provider-specific field names, `new-password` hints and password-manager ignore hints reduce unwanted login autofill. Browsers can still override hints, so review every credential before saving. API ID fields reject email addresses with actionable messages on both client and server.
+- Switching provider editors preserves drafts. Saving one provider refreshes that provider without deleting drafts for others. Discard/reload controls are explicit. A page-exit warning protects unsaved provider changes on full-page navigation (not a guarantee for all internal navigation).
+- Messages can be searched and filtered by channel/status within the latest 100 loaded records; filters do not change all-history summary totals. Report scope does not select the target of administrative credit operations.
+- Credit allocation, plan allowances and recharge packs have separate task selectors. Allocation is disabled when no organization exists; a confirmation names the selected recipient. Pack retries reuse a client-generated pack ID and successful creation clears the form. Pack prices display paise accurately.
+- Owner notification edits survive report refresh. Checkout is locked until the provider modal closes or verification completes, preventing overlapping checkout windows within one mounted page. This is not cross-device payment idempotency; always reconcile uncertain orders before another purchase.
+- Unknown/malformed successful provider responses retain the credit reservation rather than being treated as definite rejection. Explicit SMTP 4xx/5xx rejections release the reservation. Existing uncertain-send reconciliation remains required before any resend.
+
+This update uses the existing migration 005 schema; **no new SQL migration is required** if 005 is already applied. Optional browser regression: `npm run test:settings:ui` (Vite development server and the optional browser dependencies required). All provider/payment calls in these tests are mocked.

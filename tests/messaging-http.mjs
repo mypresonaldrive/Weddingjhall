@@ -22,6 +22,8 @@ try{
  for(const role of ['owner','staff','client'])assert.equal((await get('/api/platform/settings',role)).status,403);
  assert.equal((await get('/api/platform/settings','platform','aal1')).status,403);
  const response=await get('/api/platform/settings'),text=await response.text();assert(!text.includes('SERVER-SECRET'));const visible=JSON.parse(text);assert.equal(visible.settings.email.secrets.password,true);assert.equal(visible.settings.email.fields.password,undefined);
+ const goodKey=process.env.INTEGRATION_ENCRYPTION_KEY;process.env.INTEGRATION_ENCRYPTION_KEY='invalid-key';const unready=await (await get('/api/platform/settings')).json();assert.equal(unready.encryptionReady,false);assert(!JSON.stringify(unready).includes('SERVER-SECRET'));process.env.INTEGRATION_ENCRYPTION_KEY=goodKey;
+ assert.equal((await post('/api/platform/settings/email',{enabled:false,revision:1,fields:{host:'https://wrong.example',port:'587',user:'user',from:'sender@example.test'}})).status,400);
  let save=await post('/api/platform/settings/email',{enabled:true,revision:1,fields:{host:'smtp2.example.test',port:'465',user:'user',from:'sender@example.test',password:''}});assert.equal(save.status,200);assert.equal(decryptConfig('email',updated.encrypted).password,'SERVER-SECRET-DO-NOT-RETURN');assert.equal(updated.revision,2);
  assert.equal((await post('/api/platform/settings/email',{enabled:true,revision:0,fields:{}})).status,409);
  assert.equal((await post('/api/platform/messages/grant',{},'owner')).status,403);
