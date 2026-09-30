@@ -4,6 +4,8 @@
 **Code baseline:** `33c2094fc57a7ce3e4958d29ca206233b832db77`, `mypresonaldrive/Weddingjhall`.
 **Scope:** source inspection, fresh local regression/build/audit execution and two isolated reproductions of existing function behavior. This is not a penetration test, load test, Docker execution or live-provider certification.
 
+**Forward roadmap:** staged enhancement options live in [MULTI-TENANCY-ENHANCEMENTS.md](MULTI-TENANCY-ENHANCEMENTS.md); findings below take precedence.
+
 ## Executive decision
 
 **Suitable for continued development and controlled staging; not yet approved for unrestricted customer production.**

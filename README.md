@@ -4,7 +4,7 @@ A marriage-hall management app with separate Supabase-backed SaaS and disposable
 
 ## Verified project status
 
-This is a **React 19 + Vite / Node.js + Express** application, not a Flutter/Dart project. Read the [verified project analysis](docs/PROJECT-ANALYSIS.md) for architecture, security boundaries, test evidence, current limitations and launch priorities. For the deeper review and open findings, see the [production-readiness assessment](docs/PRODUCTION-READINESS.md). Local test success is not live-provider or Docker certification.
+This is a **React 19 + Vite / Node.js + Express** application, not a Flutter/Dart project. Read the [verified project analysis](docs/PROJECT-ANALYSIS.md) for architecture, security boundaries, test evidence, current limitations and launch priorities. For the deeper review and open findings, see the [production-readiness assessment](docs/PRODUCTION-READINESS.md), and for the staged roadmap see the [multi-tenancy enhancement options](docs/MULTI-TENANCY-ENHANCEMENTS.md). Local test success is not live-provider or Docker certification.
 
 ## First-time Supabase setup
 
