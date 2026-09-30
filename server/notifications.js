@@ -76,6 +76,6 @@ export const defaultBranding={logoText:'Gatherhall',logoUrl:'',title:'Gatherhall
 let brandingCache={at:0,value:defaultBranding};
 export async function currentBranding(admin){
  if(Date.now()-brandingCache.at<15000)return brandingCache.value;
- try{const {data,error}=await admin.from('platform_settings').select('value').eq('key','branding').maybeSingle();if(!error&&data?.value)brandingCache={at:Date.now(),value:{...defaultBranding,...data.value}};else if(!error)brandingCache.at=Date.now();}catch{}
+ try{const query=admin.from('platform_settings').select('value').eq('key','branding').maybeSingle(),{data,error}=await Promise.race([query,new Promise((_,reject)=>setTimeout(()=>reject(Error('branding lookup timed out')),2500))]).catch(err=>({timeout:err}));if(!error&&data?.value)brandingCache={at:Date.now(),value:{...defaultBranding,...data.value}};else if(!error&&data!==undefined)brandingCache.at=Date.now();}catch{}
  return brandingCache.value;
 }

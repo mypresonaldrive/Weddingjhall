@@ -5,6 +5,7 @@ import express from 'express';
 import {installPublicCMS,installPlatformCMS} from './cms.js';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import compression from 'compression';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { randomBytes,randomUUID,createHmac,createHash,timingSafeEqual } from 'node:crypto';
@@ -52,6 +53,7 @@ app.post('/api/webhooks/razorpay',express.raw({type:'application/json',limit:'25
  if(!await result(admin.from('saas_subscriptions').select('tenant_id').eq('provider_subscription_id',id).maybeSingle()))throw fail('Subscription not registered yet; retry webhook.',503);
  await synchronize(id,eventId,event.event,event.payload?.payment?.entity);res.json({received:true});
 }));
+app.use(compression({threshold:1024,filter:(req,res)=>(req.path==='/'||req.path.endsWith('.js')||req.path.endsWith('.css')||req.path.startsWith('/api'))&&compression.filter(req,res)}));
 app.use(express.json({limit:'256kb'}));app.use(cookieParser());
 app.use('/api',(req,res,next)=>{res.set('Cache-Control','no-store');if(!req.cookies.gh_csrf){res.cookie('gh_csrf',randomBytes(24).toString('hex'),{secure,sameSite:'strict',path:'/',maxAge:7*86400000});}if(!['GET','HEAD','OPTIONS'].includes(req.method)){const a=req.cookies.gh_csrf,b=req.get('x-csrf-token');if(req.get('origin')&&req.get('origin')!==origin)return next(fail('Untrusted request origin.',403));if(!a||!b||! /^[a-f0-9]{48}$/.test(a)||! /^[a-f0-9]{48}$/.test(b)||!timingSafeEqual(Buffer.from(a),Buffer.from(b)))return next(fail('Session security check failed. Refresh the page and retry.',403));}next();});
 app.get('/healthz',route(async(_req,res)=>{await Promise.all(['saas_plans','cms_entries','platform_integrations','message_jobs'].map(table=>result(admin.from(table).select(table==='platform_integrations'?'kind':'id').limit(1))));res.json({status:'ok',mode:'saas'});}));
@@ -138,8 +140,10 @@ async function saveRecord(req,res){const id=req.params.id||randomUUID();if(req.b
 app.post('/api/:kind',member,writeAccess,resourceAccess,route(saveRecord));app.put('/api/:kind/:id',member,writeAccess,resourceAccess,route(saveRecord));app.delete('/api/:kind/:id',member,writeAccess,resourceAccess,route(async(req,res)=>{await rpc('saas_delete_record',{actor:req.actor.id,t:req.membership.tenant_id,k:req.kind,rid:req.params.id});res.json({success:true});}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'API endpoint not found.'}));
 app.use((error,req,res,_next)=>{const status=error instanceof z.ZodError?400:error.status||500;if(status===500)console.error('SaaS request failed',{path:req.path,code:error.code||'internal'});res.status(status).json({error:error instanceof z.ZodError?error.issues[0]?.message||'Check the submitted fields.':status===500?'The request could not be completed. Please try again or contact support.':error.message});});
-if(env.NODE_ENV==='production'){app.use(express.static('dist',{index:false}));app.get('*',(_req,res)=>res.sendFile(process.cwd()+'/dist/index.html'));}else{const {createServer}=await import('vite');app.use((await createServer({server:{middlewareMode:true,allowedHosts:true},appType:'spa'})).middlewares);}
+if(env.NODE_ENV==='production'){app.use(express.static('dist',{index:false,fallthrough:true,setHeaders:(res,file)=>{if(/[\/]assets[\/]/.test(file))res.setHeader('Cache-Control','public, max-age=31536000, immutable');}}));app.get('*',(_req,res)=>res.setHeader('Cache-Control','no-cache').sendFile(process.cwd()+'/dist/index.html'));}else{const {createServer}=await import('vite');app.use((await createServer({server:{middlewareMode:true,allowedHosts:true},appType:'spa'})).middlewares);}
 const port=Number(env.PORT||3000);if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid PORT.');
 const stopMessages=startMessageWorker({admin,result,rpc});
+// Warm the public branding cache so the first /api/config never waits on the database.
+currentBranding(admin).catch(()=>{});
 const server=app.listen(port,'0.0.0.0',()=>console.log(`Gatherhall SaaS listening on ${port}; billing mode: ${billingEnabled?billingMode:'not configured'}`));
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{(async()=>{try{await stopMessages();}catch{}finally{server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),12000).unref();}})();});
