@@ -4,6 +4,8 @@
 - **Repository:** `mypresonaldrive/Weddingjhall`
 - **Application baseline:** `12642d77163120895cb524068fc98e699e5a7f6a` on `arena/01a0e5a2-weddingjhall`
 
+> **Follow-up:** The [deeper production developer review](PRODUCTION-READINESS.md) identifies additional open findings, including CSV formula handling, logout revocation error reporting, stale edits and retry idempotency. Read that review before a production decision. Passing the earlier suites did not cover all these cases.
+
 ## Executive verdict
 
 The supplied analysis is **mostly correct about the stack, implemented features and launch limitations**, but overstates several security and verification claims. This is a React/Express venue-management SaaS application, **not a Flutter project**. No `.dart` files or `pubspec.yaml` exist in the reviewed application tree. `weddinghallFlutteri` is not the name of this checkout; another repository would need its own review.
