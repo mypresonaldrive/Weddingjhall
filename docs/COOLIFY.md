@@ -4,7 +4,7 @@ New to Supabase? Start with [the first-time setup walkthrough](SUPABASE-FIRST-TI
 
 ## Status and boundaries
 
-This is a production-oriented implementation, **not a live-certified deployment**. Local migration/business-rule tests and demo regressions are separate from real Supabase Auth, SMTP, Razorpay Checkout/webhook and Docker verification. Complete the acceptance checklist below before onboarding customers. The default draft prices are illustrative and need operator approval.
+This is a production-oriented implementation, **not a live-certified deployment**. Local migration/business-rule tests and demo regressions are separate from real Supabase Auth, SMTP, Razorpay Checkout/webhook and Docker verification. Complete the acceptance checklist below before onboarding customers. See the [verified project analysis](PROJECT-ANALYSIS.md) for the distinction between implemented controls, local tests and live acceptance. The default draft prices are illustrative and need operator approval.
 
 Production defaults to `APP_MODE=saas` and fails startup without Supabase credentials and an HTTPS `APP_URL`. SQLite exists only in the explicitly isolated demo. There is no automatic migration of demo accounts or records into real organizations.
 
@@ -14,7 +14,7 @@ One organization per user is currently supported; multiple halls belong to that 
 
 Use a **dedicated new project**, not a project hosting unrelated apps. Apply all files in `supabase/migrations/` in filename order, once each through versioned Supabase migrations / SQL administration. It revokes public-schema privileges broadly and is not intended to be rerun without migration tracking. The initial migration creates tenant RLS, service-only mutation RPCs, auth-profile trigger, platform administration, audit, subscription snapshots and billing ledger.
 
-Browser writes and sensitive RPC execution are revoked. The service-role key is server-only. The server verifies Supabase users, applies actor authorization, checks platform AAL2, then calls privileged business RPCs. Platform admins can inspect tenant metadata and SaaS billing, not automatically read tenant customer/booking records.
+Browser writes and sensitive RPC execution are revoked. The service-role key is server-only. The server verifies Supabase users, applies actor authorization and checks platform AAL2 for administrative operations. Core domain and credit-accounting mutations use privileged business RPCs; settings, consent, some messaging operations and audit writes also use direct service-role table access. These direct writes rely on explicit server-side authorization and tenant scoping, not browser RLS. Platform admins can inspect tenant metadata and SaaS billing, not automatically read tenant customer/booking records.
 
 Enable email confirmation. Configure custom SMTP, sender/domain verification, production Site URL and redirect allowlist for your exact HTTPS domain. Test delivery, expiry and abuse limits. Configure Turnstile secret in Supabase Auth if using `TURNSTILE_SITE_KEY` in the app.
 
@@ -74,7 +74,7 @@ The `REGISTRATION_ENABLED=false` gate blocks both public account creation and ne
 
 ## 6. Mandatory release checks
 
-- Run `npm run build`, `npm run test:saas`, `npm run test:saas:http`, and `npm run test:deployment` (the latter is the isolated legacy/demo regression suite, not a real SaaS E2E test).
+- Run `npm run build`, `npm run test:saas`, `npm run test:messaging`, `npm run test:saas:http`, and `npm run test:deployment` (the latter is the isolated legacy/demo regression suite, not a real SaaS E2E or Docker test). The current GitHub Actions workflow runs these backend regression groups; optional browser suites and actual Docker execution are separate checks.
 - Two real Supabase accounts/organizations: verify signup confirmation, logout, refresh, password recovery, explicit invitations, inactive membership and cross-tenant reads/writes with both API and direct RLS access.
 - Admin password-only session must fail platform API/RLS. Verify MFA setup, challenge, expiry, and controlled administrator recovery.
 - Razorpay sandbox: first activation, verified checkout, repeated/out-of-order webhooks, failed payment/retry, expired trial, captured ledger, cancellation, suspension and uncertain-create reconciliation. Confirm no duplicate recurring mandate under concurrent attempts.

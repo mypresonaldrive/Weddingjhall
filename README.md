@@ -2,6 +2,10 @@
 
 A marriage-hall management app with separate Supabase-backed SaaS and disposable SQLite demo modes. Includes organization subscriptions with hall limits, a platform administration dashboard, and Razorpay integration. Live Supabase/SMTP/payment acceptance testing is still required before customer launch.
 
+## Verified project status
+
+This is a **React 19 + Vite / Node.js + Express** application, not a Flutter/Dart project. Read the [verified project analysis](docs/PROJECT-ANALYSIS.md) for architecture, security boundaries, test evidence, current limitations and launch priorities. Local test success is not live-provider or Docker certification.
+
 ## First-time Supabase setup
 
 Start with the [step-by-step Supabase SaaS setup guide](docs/SUPABASE-FIRST-TIME.md). It covers the dashboard, migrations, private server environment settings, email verification, your first platform-admin account, MFA, CMS publication and the first venue-owner subscription. The existing frontend calls Express; do **not** put a Supabase secret/service-role key in React or `VITE_*` variables.
@@ -29,13 +33,13 @@ APP_MODE=saas npm start
 - `/pricing`: owner plans and registration; organization-level subscriptions, not per-hall billing.
 - Plans, tenant suspension/restoration, audit history, gross collection ledger and estimated MRR.
 - Verified-email auth, HttpOnly cookies, CSRF, platform MFA, RLS and atomic business-rule RPCs.
-- Razorpay checkout verification, signed lifecycle webhooks and uncertain-checkout reconciliation.
+- Razorpay subscription checkout verification, signed lifecycle webhooks and uncertain-checkout reconciliation; separate Razorpay orders for messaging-credit purchases. Venue booking payments remain manually recorded.
 - `npm run test:saas`: local SQL/security/signature tests. `npm run test:deployment`: isolated demo regression suite.
 - Seed subscription prices are draft illustrations, not approved live offers.
 
 ## Public website & CMS
 
-Indian-inspired lavender/ivory landing page with a 3D architectural illustration, English/Hindi pages, journal, and platform-owner editorial CMS. Save drafts, preview, publish, restore revisions and manage contact enquiries. Legal templates start unpublished. See [the CMS guide](docs/WEBSITE-CMS.md) for routes, migration, security, local-preview behavior and limitations.
+Indian-inspired lavender/ivory, photo-led homepage with an illustrative wedding-hall hero, venue-business cards, a subscription-plan finder and a supporting 3D architectural illustration. Includes English/Hindi pages, journal, and platform-owner editorial CMS. Save drafts, preview, publish, restore revisions and manage contact enquiries. Legal templates start unpublished. See [the CMS guide](docs/WEBSITE-CMS.md) for routes, migration, security, local-preview behavior and limitations.
 
 ## Light periwinkle UI & booking improvements
 
@@ -119,7 +123,7 @@ Before public production deployment, remove/disable automatic demo sign-in and s
 
 ## Imagery
 
-Venue images are locally stored for reliable previews. Demo imagery was sourced from [Carats & Cake](https://caratsandcake.com/articles/ceiling-wedding-decor) and [Pinterest venue inspiration](https://pinterest.com/ideas/chandelier-wedding-reception/952332121845). Replace these demonstration photographs with your own licensed venue photography for production.
+Venue images are locally stored for reliable previews. Demo imagery was sourced from [Carats & Cake](https://caratsandcake.com/articles/ceiling-wedding-decor) and [Pinterest venue inspiration](https://pinterest.com/ideas/chandelier-wedding-reception/952332121845). Before commercial publication, document suitable rights or replace these demonstration photographs with your own licensed photography. The homepage crops `home-banquet.webp`, `home-lawn.webp` and `home-multi.webp` inherit the same rights-verification requirement. The `wedding-hall-*.webp` hero images are separately generated illustrative artwork, not photographs of bookable venues; see the [homepage asset notes](docs/WEBSITE-CMS.md#public-homepage-visual-refresh).
 
 ## Pricing models, menus and printing
 
