@@ -115,6 +115,8 @@ npm test
 
 The API integration suite verifies authentication, session revocation, tenant isolation, stable client ownership, role permissions, CRUD, privacy-safe availability checks, double-booking prevention, capacity, and payment balances. Test records are removed on successful completion.
 
+**Concurrency-safe writes:** record updates send an `If-Match-Version` header and creates send a stable `Idempotency-Key`; the database rejects stale edits (HTTP 409, workspace reloads the latest version) and returns the original record for retried creates instead of duplicating payments. Settings, messaging and audit-sensitive writes commit atomically with their audit rows. Notifications are delivered by a graceful worker — `npm run worker` or `docker compose --profile worker up -d worker` with `MESSAGE_WORKER_ENABLED=true` on exactly one process type (see [deployment](docs/COOLIFY.md#4-coolify--docker)); in-job claims use skip-locked dispatch so in-flight sends finish cleanly on shutdown.
+
 ## Deployment considerations
 
 This is a runnable demo, not a connected payment processor. Payments are manually recorded. Owners can create real staff/client sign-in accounts by setting an optional initial password on directory forms. Existing account credentials are not changed by directory edits. Email invitations, password recovery, and online payment processing are not connected to external providers.

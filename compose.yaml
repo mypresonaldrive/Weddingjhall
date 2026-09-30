@@ -15,3 +15,25 @@ services:
       - "${APP_PORT:-3000}:3000"
     # All production data lives in Supabase; no SQLite production volume.
     stop_grace_period: 15s
+
+  # Optional dedicated notification worker (recommended for production).
+  # Enable with: docker compose --env-file .env --profile worker up -d
+  # Job claims use SELECT ... FOR UPDATE SKIP LOCKED, so the worker may run
+  # alongside the web service, but keep MESSAGE_WORKER_ENABLED=true on exactly
+  # one process type so the topology stays obvious. Graceful stop finishes
+  # any in-flight provider send before exit.
+  worker:
+    profiles: ["worker"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_MODE: saas
+      MESSAGE_WORKER_ENABLED: "true"
+    command: ["node", "server/message-worker.js"]
+    stop_grace_period: 30s

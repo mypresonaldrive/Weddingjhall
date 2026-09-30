@@ -1,4 +1,4 @@
-import React,{useState,useEffect,lazy,Suspense} from 'react';
+import React,{useState,useEffect,useRef,lazy,Suspense} from 'react';
 import {LayoutDashboard,CalendarDays,Building2,Users,Wallet,ChartNoAxesCombined,Settings,ChevronDown,ChevronRight,ChevronLeft,Plus,Search,Bell,ArrowUpRight,ArrowDownLeft,ArrowRight,MoreHorizontal,SlidersHorizontal,Download,X,Check,Clock,MapPin,Mail,Phone,LogOut,Menu,Flower2,Headphones,CheckCheck,Trash2,Pencil,LoaderCircle,ShieldCheck,UserRound,CalendarCheck,IndianRupee,MoveUpRight,ExternalLink,CheckCircle2,Filter,PanelLeftClose,PackagePlus,Printer} from 'lucide-react';
 import { PackageCatalog, BookingPackageEditor, QuoteBreakdown, downloadEstimate } from './BookingPackages.jsx';
 import { FoodMenuEditor } from './FoodMenus.jsx';
@@ -39,7 +39,16 @@ export default function App({production=false,initialUser=null,onSessionEnd=()=>
  const canEdit=kind=>(!production||user?.entitlement?.active)&&(user?.role==='owner'||(user?.role==='staff'&&!['halls','staff','plans','addons'].includes(kind)));
  const create=kind=>{if(kind==='bookings'&&(!data.halls.length||!data.clients.length)){notify('Add a hall and a client before creating a booking.',true);return;}setModal({kind,item:null});};
  const remove=async(kind,item)=>{const previous=data;setData(d=>({...d,[kind]:d[kind].filter(x=>x.id!==item.id),...(kind==='bookings'?{payments:d.payments.filter(p=>p.bookingId!==item.id)}:{})}));setModal(null);try{await api(`/${kind==='plans'?'pricing-models':kind}/${item.id}`,{method:'DELETE'});notify('Record deleted successfully.')}catch(e){setData(previous);notify(e.message,true)}};
- const save=async(kind,item,values)=>{const saved=await api(`/${kind==='plans'?'pricing-models':kind}${item?'/'+item.id:''}`,{method:item?'PUT':'POST',body:JSON.stringify(values)});setData(d=>({...d,[kind]:item?d[kind].map(x=>x.id===item.id?saved:x):[saved,...d[kind]]}));setModal(null);notify(item?'Changes saved successfully.':kind==='bookings'?'Your booking has been created.':'Record added successfully.');};
+ const intentKey=useRef(null);
+ const save=async(kind,item,values)=>{
+  // Sends the record version so the database can reject stale edits, and a stable idempotency
+  // key on creates so a retried submission returns the original record instead of duplicating it.
+  const headers={};if(item&&Number.isInteger(item.version))headers['If-Match-Version']=String(item.version);
+  if(!item){intentKey.current=intentKey.current||crypto.randomUUID();headers['Idempotency-Key']=intentKey.current;}
+  let saved;try{saved=await api(`/${kind==='plans'?'pricing-models':kind}${item?'/'+item.id:''}`,{method:item?'PUT':'POST',headers,body:JSON.stringify(values)});}
+  catch(e){if(/another change was saved/i.test(e.message)){let fresh=null;try{fresh=await load();}catch{}const latest=item&&fresh?.[kind]?.find(x=>x.id===item.id);setModal(m=>m?.item&&latest?{...m,item:{...m.item,version:latest.version}}:m);}throw e;}
+  intentKey.current=null;
+  setData(d=>({...d,[kind]:item?d[kind].map(x=>x.id===item.id?saved:x):[saved,...d[kind]]}));setModal(null);notify(saved?.deduplicated?'This record was already saved; a duplicate was prevented.':item?'Changes saved successfully.':kind==='bookings'?'Your booking has been created.':'Record added successfully.');};
  const exportData=(rows,name)=>{if(!rows.length){notify('No records to export.',true);return;}const cols=Object.keys(rows[0]).filter(k=>!k.endsWith('Id')&&k!=='id');const csv=[cols.join(','),...rows.map(r=>cols.map(k=>'"'+String(r[k]&&typeof r[k]==='object'?JSON.stringify(r[k]):r[k]??'').replaceAll('"','""')+'"').join(','))].join('\n');const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download=`gatherhall-${name}.csv`;a.click();URL.revokeObjectURL(url);notify('Your export is ready.');};
  const paidFor=id=>data.payments.filter(p=>p.bookingId===id).reduce((s,p)=>s+p.amount,0);
  const upcoming=data.bookings.filter(b=>b.date>=TODAY&&b.status!=='Cancelled').sort((a,b)=>a.date.localeCompare(b.date));

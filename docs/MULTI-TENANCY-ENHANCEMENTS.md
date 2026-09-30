@@ -28,10 +28,10 @@ This is a reasonable shared-schema SaaS foundation. The roadmap below hardens it
 | T1.4 | **Hybrid relational schema for hot paths** — promote frequently queried/sorted fields (booking date, status, customer, amount, hall) from JSONB into typed indexed columns; keep JSONB for the flexible tail | The org-wide JSONB document forces full-tenant loads, weak ad-hoc reporting, and full-document rewrites. Start with bookings/payments — highest contention | L |
 | T1.5 | **Composite indexes with `organization_id` first** on every tenant table + query-plan (`EXPLAIN`) review for workspace load, availability, and dashboard queries | Without index discipline, one large tenant slows every other tenant — the noisy-neighbor problem at the database layer | S |
 | T1.6 | **Per-tenant rate limiting and quotas** — API, export, login, and messaging limits keyed by organization (not just IP), with 429 responses + alerts | Protects all tenants from one tenant's abuse/bug; also enables plan-based limits later | M |
-| T1.7 | **Transactional outbox** — enqueue notifications/audits in the same DB transaction as the mutation; separate worker process (or Supabase Cron) drains them with retry and dead-letter states | Fixes F5 (audit-after-mutation partial failures) structurally, makes restart/deploy loss visible instead of silent, and removes notification work from the web process | M |
+| T1.7 ✅ | **Transactional outbox** — *delivered 30 Sep 2026: notification enqueue was already transactional via the `message_enqueue` trigger; mutation+audit operations are now atomic RPCs (`202609300001_concurrency_atomic.sql`); the worker is a graceful standalone process (`npm run worker`, compose `worker` profile) whose stop waits for in-flight sends.* — enqueue notifications/audits in the same DB transaction as the mutation; separate worker process (or Supabase Cron) drains them with retry and dead-letter states | Fixes F5 (audit-after-mutation partial failures) structurally, makes restart/deploy loss visible instead of silent, and removes notification work from the web process | M |
 | T1.8 | **Scheduled retention/cleanup jobs** (pg_cron / Supabase Scheduled Jobs) — rate-limit buckets (F7), expired invitations/otps, old audit and delivery records per a written retention policy | Prevents unbounded table growth that degrades every tenant over time | S |
 | T1.9 | **Supabase Storage for tenant media** with per-organization buckets/policies (hall photos, documents), size/type validation, and signed URLs | Today there is no tenant upload pipeline; putting files in the DB or public URLs would create isolation problems later | M |
-| T1.10 | **Stale-check + idempotency standard for all write APIs** (expected-version header / `If-Match`-style on records; idempotency keys on payment-style creates) | Closes F3 and F4 generically, so future features inherit safe writes instead of re-introducing the bugs | M |
+| T1.10 ✅ | **Stale-check + idempotency standard for all write APIs** — *delivered 30 Sep 2026: `If-Match-Version` optimistic concurrency and `Idempotency-Key` create dedupe in `saas_save_record`; see F3/F4 fixes in PRODUCTION-READINESS.md.* (expected-version header / `If-Match`-style on records; idempotency keys on payment-style creates) | Closes F3 and F4 generically, so future features inherit safe writes instead of re-introducing the bugs | M |
 
 ## 3. Tier 2 — Tenant lifecycle & commercial SaaS
 
@@ -69,11 +69,11 @@ This is a reasonable shared-schema SaaS foundation. The roadmap below hardens it
 
 ## 6. Suggested phases
 
-**Phase 1 — Pilot-hardening (now):** F1–F7 fixes → T1.1, T1.3, T1.4 (bookings/payments only), T1.5, T1.7, T1.8, T1.10.
+**Phase 1 — Pilot-hardening (now):** ~~T1.7, T1.10~~ (delivered 30 Sep 2026) and remaining F1, F2, F6, F7 fixes → T1.1, T1.3, T1.4 (bookings/payments only), T1.5, T1.8.
 **Phase 2 — Commercial depth (before marketing to many venues):** T2.1–T2.4, T2.7, plus T1.9 for media.
 **Phase 3 — Enterprise (when a large customer or compliance demand appears):** T3.1–T3.8 on demand, not speculatively.
 
-**Recommended first five engineering items:** stale-write protection + idempotency (T1.10), outbox + separate worker (T1.7), cross-tenant test matrix (T1.3), tenant-context middleware (T1.1), retention jobs (T1.8). Together they remove the findings that could actually corrupt or mix tenant data.
+**Recommended next five engineering items:** cross-tenant test matrix (T1.3), tenant-context middleware (T1.1), retention jobs (T1.8), remaining F1/F2/F6/F7 fixes, then hybrid relational hot paths (T1.4). ~~T1.10 and T1.7~~ are delivered. Together they remove the findings that could actually corrupt or mix tenant data.
 
 ## 7. Verification rule for every enhancement
 

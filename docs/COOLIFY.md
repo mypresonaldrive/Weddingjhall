@@ -66,6 +66,8 @@ Required: `APP_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE
 
 For Compose: copy `.env.example` to ignored `.env`, fill values privately, then `docker compose up --build -d`. Docker was not available in the development sandbox, so image execution still needs verification. Outbound HTTPS to Supabase and Razorpay must be allowed. Production uses frame-ancestor restrictions to prevent clickjacking; operate on the configured domain, not an embedded preview iframe.
 
+**Notification worker (recommended dedicated process):** booking-confirmation jobs are always committed transactionally with the booking, but they are delivered only when a worker is running. Preferred: `docker compose --env-file .env --profile worker up -d worker` (or `npm run worker` on any trusted host) with `MESSAGE_WORKER_ENABLED=true` set **only** for the worker process. Job claims use `SELECT ... FOR UPDATE SKIP LOCKED`, so web and worker processes cannot double-dispatch a job, and `stop()` lets an in-flight provider send finish before exit during deploys. The simpler alternative is `MESSAGE_WORKER_ENABLED=true` on the single web container for small deployments. Either way, confirm exactly one enabled topology; if every process has the worker disabled, queued messages wait in the `held/queued` report instead of sending.
+
 ## 5. Publish your plans
 
 In Platform → Subscription plans, edit the draft Starter/Growth/Scale offers and approve prices, hall limits, active-staff quotas, trial days and tax treatment before publishing. These software subscription plans are distinct from the venue's event pricing models and food menus. Publish/unpublish affects new signups; it does not rewrite existing contracts.

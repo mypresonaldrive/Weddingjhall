@@ -149,6 +149,8 @@ response: { success: true }
 
 ### F3 — Ordinary record edits have no stale-version check: P1 for concurrent operations, code-confirmed gap
 
+> **Status update (30 September 2026): FIXED** in migration `202609300001_concurrency_atomic.sql`. `saas_save_record` now accepts `expected_version`; updates with a mismatched version raise `STALE_RECORD`, returned as HTTP 409, and every record carries a monotonically increasing `version` exposed through `/api/data`. The workspace sends `If-Match-Version`, reloads the latest data on conflict and re-targets the save at the new version so the user consciously re-applies. Regression coverage: `tests/saas-concurrency.mjs`. Legacy callers that omit the version still save without the guard by design (documented backwards compatibility).
+
 **Locations:** `server/production.js` `saveRecord`, migration 002 `saas_save_record`.
 
 Updates replace the document body without a client-supplied expected revision/`updated_at` comparison. Database locking serializes writes but does not detect that the second user submitted an older view of the record.
@@ -159,6 +161,8 @@ Updates replace the document body without a client-supplied expected revision/`u
 
 ### F4 — Manual create/payment retries lack request idempotency: P1 for financial operations, code-confirmed gap
 
+> **Status update (30 September 2026): FIXED** in migration `202609300001_concurrency_atomic.sql`. Clients send a stable `Idempotency-Key` (one per form intent, reused across submit retries); `saas_records.idempotency_key` has a per-tenant/kind partial unique index, and `saas_save_record` returns the original committed record with `deduplicated: true` instead of writing a duplicate — including the racing-insert case via a unique-violation fallback. No duplicate payment row or audit entry is created (regression-tested in `tests/saas-concurrency.mjs`). Boundary: a brand-new user intent after a full page reload gets a fresh key, which is correct because it is a new intent.
+
 **Location:** `server/production.js`, `saveRecord` creates a fresh `randomUUID()` for each POST.
 
 **Risk scenario:** a payment record is saved but the HTTP response is lost; retrying the same user intent can create another payment while sufficient booking balance remains. The overpayment bound prevents exceeding the total, not duplicate partial-payment intent. Provider-webhook idempotency does not cover this manual record endpoint.
@@ -166,6 +170,8 @@ Updates replace the document body without a client-supplied expected revision/`u
 **Recommendation:** accept a stable request idempotency key scoped to actor/tenant/action and persist the result atomically. Distinguish an intentional second payment from a retry. Test concurrent duplicate requests and dropped responses. This scenario was source-reviewed, not fault-injected end to end.
 
 ### F5 — Some updates and their audit insert are separate operations: P1/P2 by operation, code-confirmed gap
+
+> **Status update (30 September 2026): LARGELY FIXED** in migration `202609300001_concurrency_atomic.sql`. Integration settings now save via `platform_save_integration` (revision CAS + audit in one transaction), and messaging preferences, consent, held-job retry, packs, allowances and uncertain-order reconciliation commit mutation + audit atomically via dedicated RPCs (`message_save_prefs`, `message_save_consent`, `message_retry_job`, `message_save_pack`, `message_save_allowance`, `message_reconcile_order`). Booking-notification job enqueueing was already atomic via the `message_enqueue` trigger inside the save transaction. **Remaining documented residual:** the platform credit-grant route (`message_grant` RPC) commits credits atomically itself but its audit row remains a separate best-effort insert; the recharge order-creation route still writes order rows in two steps with the existing `creating` → reconcile uncertainty handling.
 
 **Locations:** `server/integrations.js` settings save; `server/messaging.js` preferences/consent/packs and other administrative operations.
 
@@ -317,8 +323,8 @@ Not rerun in this analysis: optional browser suites. Not performed: live Supabas
 ### Before relying on real customer workflows
 
 1. Fix and regression-test spreadsheet-safe CSV and truthful logout revocation handling (F1/F2).
-2. Add stale-edit protection and stable payment-create idempotency (F3/F4), or explicitly restrict affected workflows while implementing them.
-3. Make critical mutation/audit operations atomic and improve failure classification (F5/F6).
+2. ~~Add stale-edit protection and stable payment-create idempotency (F3/F4),~~ **done** — see status updates above.
+3. ~~Make critical mutation/audit operations atomic~~ **done** for the listed operations (see F5); improve failure classification (F6) remains open.
 4. Complete real two-tenant authorization/MFA/auth-recovery acceptance and provider payment/message tests.
 5. Execute Docker/ingress/backup-restore checks and establish incident/reconciliation ownership.
 6. Publish reviewed policies/plans, confirm asset rights and keep unaccepted features disabled.
