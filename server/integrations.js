@@ -32,6 +32,19 @@ export function installIntegrationSettings(app,{admin,result,rpc,route,platform,
  let saved;try{saved=await rpc('platform_save_integration',{p_kind:kind,p_actor:req.actor.id,p_enabled:p.enabled,p_encrypted:encryptConfig(kind,c),p_expected:p.revision});}catch(error){const message=String(error?.message||'');if(message.startsWith('STALE_SETTINGS:')||error?.code==='23505')throw Object.assign(Error('Settings changed. Reload before saving.'),{status:409});throw error;}
  res.json({saved:true,revision:saved?.revision??p.revision+1,restartRequired:kind==='razorpay'});
  }));
+ // Verify saved Razorpay credentials against the provider API. Never returns secrets.
+ app.post('/api/platform/integrations/test',platform,rateLimit('integration-test',10,600),route(async(req,res)=>{
+  const kind=z.literal('razorpay').parse(req.body?.kind);
+  if(!encryptionReady())throw Object.assign(Error('Set INTEGRATION_ENCRYPTION_KEY to test saved credentials.'),{status:503});
+  const r=await readIntegration(admin,result,kind);
+  if(!r||!r.config?.keyId||!r.config?.keySecret)throw Object.assign(Error('Save the key ID and key secret first.'),{status:400});
+  let ok=false,status=0;
+  try{const response=await fetch('https://api.razorpay.com/v1/plans?count=1',{headers:{Authorization:'Basic '+Buffer.from(r.config.keyId+':'+r.config.keySecret).toString('base64')},signal:AbortSignal.timeout(8000),redirect:'error'});status=response.status;ok=response.ok;}
+  catch{throw Object.assign(Error('Could not reach Razorpay. Check outbound network access from the server.'),{status:502});}
+  await result(admin.from('audit_log').insert({actor_id:req.actor.id,action:'integration.connection-test',details:{kind,ok,status}}));
+  if(!ok){if(status===401||status===403)throw Object.assign(Error('Razorpay rejected these credentials. Check the key ID / secret pair.'),{status:400});throw Object.assign(Error('Razorpay responded with status '+status+'. Verify the account and API access.'),{status:502});}
+  res.json({ok:true,mode:r.config.keyId.startsWith('rzp_live_')?'live':'test'});
+ }));
 }
 const blocked=new BlockList();for(const [ip,n] of [['0.0.0.0',8],['10.0.0.0',8],['100.64.0.0',10],['127.0.0.0',8],['169.254.0.0',16],['172.16.0.0',12],['192.168.0.0',16],['192.0.0.0',24],['198.18.0.0',15],['224.0.0.0',4],['240.0.0.0',4]])blocked.addSubnet(ip,n);
 async function smtp(c){const ips=isIP(c.host)?[c.host]:await resolve4(c.host);if(!ips.length||ips.some(ip=>isIP(ip)!==4||blocked.check(ip)))throw Error('SMTP requires a public IPv4 destination.');return nodemailer.createTransport({host:ips[0],port:Number(c.port),secure:c.port==='465',requireTLS:true,tls:{servername:c.host,minVersion:'TLSv1.2'},auth:{user:c.user,pass:c.password},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:15000,disableFileAccess:true,disableUrlAccess:true});}
