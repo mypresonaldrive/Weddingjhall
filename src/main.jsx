@@ -10,6 +10,7 @@ import './periwinkle.css';
 import './themes.css';
 import './readability.css';
 import './dashboard-compact.css';
+import './clay.css';
 const VenueWorkspace=lazy(()=>import('./Workspace.jsx'));
 function Workspace(props){return <Suspense fallback={<Loading/>}><VenueWorkspace {...props}/></Suspense>;}
 initializeAppearance();
