@@ -1,5 +1,5 @@
 import React,{useEffect,useState,useRef,useMemo,lazy,Suspense} from 'react';
-import {LayoutDashboard,Building2,Layers3,CreditCard,ScrollText,Settings,Search,Plus,ArrowUpRight,ArrowRight,ShieldCheck,Menu,X,LogOut,RefreshCw,CheckCircle2,AlertTriangle,ChevronRight,Globe,LockKeyhole,Mail} from 'lucide-react';
+import {LayoutDashboard,Building2,Layers3,CreditCard,ScrollText,Settings,Search,Bell,Plus,ArrowUpRight,ArrowRight,ShieldCheck,Menu,X,LogOut,RefreshCw,CheckCircle2,AlertTriangle,ChevronRight,Globe,LockKeyhole,Mail} from 'lucide-react';
 import {Logo,Badge,Notice,Modal,Submit,Loading} from './components.jsx';
 import {saasApi,currency,date} from './api.js';
 import {previewOverview} from './preview.js';
@@ -8,16 +8,17 @@ import './platform-dashboard.css';
 const PlatformSettings=lazy(()=>import('./PlatformSettings.jsx'));
 const Messages=lazy(()=>import('./Messages.jsx'));
 const WebsiteCMS=lazy(()=>import('./WebsiteCMS.jsx'));
+const NotificationsAdmin=lazy(()=>import('./PlatformNotifications.jsx'));
 import {ThemeModeToggle} from '../Appearance.jsx';
-const sections=[['Overview',LayoutDashboard],['Organizations',Building2],['Subscription plans',Layers3],['Payments',CreditCard],['Website CMS',Globe],['Messages & credits',Mail],['Settings',Settings],['Audit trail',ScrollText],['Launch checklist',Settings]];
-const hashes={'Overview':'','Organizations':'#organizations','Subscription plans':'#plans','Payments':'#payments','Website CMS':'#cms','Messages & credits':'#messages','Settings':'#settings','Audit trail':'#audit','Launch checklist':'#launch'};
+const sections=[['Overview',LayoutDashboard],['Organizations',Building2],['Subscription plans',Layers3],['Payments',CreditCard],['Website CMS',Globe],['Messages & credits',Mail],['Notifications',Bell],['Settings',Settings],['Audit trail',ScrollText],['Launch checklist',Settings]];
+const hashes={'Overview':'','Organizations':'#organizations','Subscription plans':'#plans','Payments':'#payments','Website CMS':'#cms','Messages & credits':'#messages','Notifications':'#notifications','Settings':'#settings','Audit trail':'#audit','Launch checklist':'#launch'};
 const currentTab=()=>Object.keys(hashes).find(k=>hashes[k]===location.hash)||'Overview';
 const emptyOverview={organizations:[],subscriptions:[],plans:[],payments:[],audit:[],usage:[],metrics:{},setup:{}};
 export default function PlatformDashboard({preview=false,user,onLogout,config}){
  const [loaded,setData]=useState(preview?previewOverview:null),[tab,setTab]=useState(currentTab),[query,setQuery]=useState(''),[mobile,setMobile]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[modal,setModal]=useState(null),[busy,setBusy]=useState(false);
  const [refreshing,setRefreshing]=useState(false),[headerSearch,setHeaderSearch]=useState('');
  const request=useRef(0),pending=useRef(false);
- const independent=['Website CMS','Settings','Messages & credits'].includes(tab),data=loaded||emptyOverview;
+ const independent=['Website CMS','Settings','Messages & credits','Notifications'].includes(tab),data=loaded||emptyOverview;
  const load=async({force=false}={})=>{if(preview||(pending.current&&!force))return;pending.current=true;const id=++request.current;setRefreshing(true);try{setError('');const result=await saasApi('/platform/overview');if(id===request.current)setData(result);}catch(e){if(id===request.current)setError(e.message);}finally{if(id===request.current){pending.current=false;setRefreshing(false);}}};
  useEffect(()=>{if(!independent&&!loaded)load();},[tab]);
  useEffect(()=>()=>{request.current++;},[]);
@@ -38,6 +39,7 @@ export default function PlatformDashboard({preview=false,user,onLogout,config}){
 
  {tab==='Settings'&&<Suspense fallback={<Loading/>}><PlatformSettings preview={preview}/></Suspense>}
  {tab==='Messages & credits'&&<Suspense fallback={<Loading/>}><Messages platform preview={preview}/></Suspense>}
+ {tab==='Notifications'&&<Suspense fallback={<Loading/>}><NotificationsAdmin preview={preview}/></Suspense>}
  {tab==='Website CMS'&&<Suspense fallback={<Loading/>}><WebsiteCMS preview={preview}/></Suspense>}
  {tab==='Overview'&&loaded&&<Suspense fallback={<Loading/>}><PlatformOverview data={data} tenants={tenants} navigate={navigate} onCreatePlan={createPlan}/></Suspense>}
  {tab==='Organizations'&&loaded&&<section className="saas-panel"><div className="saas-panel-heading"><h3>{filtered.length} organizations</h3><label className="saas-search"><Search size={16}/><input aria-label="Search organizations" placeholder="Search name, email or city…" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>{tenants(filtered)}</section>}

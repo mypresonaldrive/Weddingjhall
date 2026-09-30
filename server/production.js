@@ -1,5 +1,6 @@
 import {installIntegrationSettings,loadSavedRazorpay} from './integrations.js';
 import {installMessaging,installRechargeWebhook,startMessageWorker} from './messaging.js';
+import {installNotifications,currentBranding} from './notifications.js';
 import express from 'express';
 import {installPublicCMS,installPlatformCMS} from './cms.js';
 import cookieParser from 'cookie-parser';
@@ -54,7 +55,7 @@ app.post('/api/webhooks/razorpay',express.raw({type:'application/json',limit:'25
 app.use(express.json({limit:'256kb'}));app.use(cookieParser());
 app.use('/api',(req,res,next)=>{res.set('Cache-Control','no-store');if(!req.cookies.gh_csrf){res.cookie('gh_csrf',randomBytes(24).toString('hex'),{secure,sameSite:'strict',path:'/',maxAge:7*86400000});}if(!['GET','HEAD','OPTIONS'].includes(req.method)){const a=req.cookies.gh_csrf,b=req.get('x-csrf-token');if(req.get('origin')&&req.get('origin')!==origin)return next(fail('Untrusted request origin.',403));if(!a||!b||! /^[a-f0-9]{48}$/.test(a)||! /^[a-f0-9]{48}$/.test(b)||!timingSafeEqual(Buffer.from(a),Buffer.from(b)))return next(fail('Session security check failed. Refresh the page and retry.',403));}next();});
 app.get('/healthz',route(async(_req,res)=>{await Promise.all(['saas_plans','cms_entries','platform_integrations','message_jobs'].map(table=>result(admin.from(table).select(table==='platform_integrations'?'kind':'id').limit(1))));res.json({status:'ok',mode:'saas'});}));
-app.get('/api/config',(_req,res)=>res.json({mode:'saas',billingEnabled,billingMode,registrationEnabled:env.REGISTRATION_ENABLED!=='false',supportEmail:env.SUPPORT_EMAIL||'',captchaSiteKey:env.TURNSTILE_SITE_KEY||''}));
+app.get('/api/config',route(async(_req,res)=>{const branding=await currentBranding(admin);res.json({mode:'saas',billingEnabled,billingMode,registrationEnabled:env.REGISTRATION_ENABLED!=='false',supportEmail:branding.supportEmail||env.SUPPORT_EMAIL||'',captchaSiteKey:env.TURNSTILE_SITE_KEY||'',branding});}));
 app.get('/api/public/plans',route(async(_req,res)=>res.json((await result(admin.from('saas_plans').select('*').eq('published',true).order('monthly_paise'))).map(publicPlan))));
 installPublicCMS(app,{admin,result,rpc,route,rateLimit});
 const credentials=z.object({email:z.string().email().max(254),password:z.string().min(12).max(128),name:z.string().trim().min(1).max(120).optional(),captchaToken:z.string().optional()});
@@ -92,6 +93,7 @@ const platform=(req,res,next)=>{if(!req.platform||req.claims.aal!=='aal2')return
 installPlatformCMS(app,{admin,result,rpc,route,platform});
 installIntegrationSettings(app,{admin,result,rpc,route,platform,rateLimit});
 installMessaging(app,{admin,result,rpc,route,platform,owner,member,rateLimit,razor});
+installNotifications(app,{admin,result,rpc,route,platform,member,rateLimit});
 const writeAccess=(req,res,next)=>{if(!req.entitlement?.active)return next(fail('Your subscription is inactive. You can view records, but must renew before making changes.',402));next();};
 app.post('/api/onboarding',rateLimit('onboarding',5,900),route(async(req,res)=>{if(env.REGISTRATION_ENABLED==='false')throw fail('New organization registration is currently closed.',403);if(!billingEnabled)throw fail('Registration opens after billing is configured.',503);const p=z.object({name:z.string().trim().min(2).max(120),phone:z.string().trim().max(30),city:z.string().trim().max(80),planId:z.string().uuid(),interval:z.enum(['monthly','yearly'])}).parse(req.body);const id=await rpc('saas_register_org',{actor:req.actor.id,p});res.status(201).json({tenantId:id});}));
 app.get('/api/billing',owner,route(async(req,res)=>{const count=async(kind,active=false)=>{let q=admin.from('saas_records').select('id',{count:'exact',head:true}).eq('tenant_id',req.organization.id).eq('kind',kind);if(active)q=q.eq('body->>status','Active');const {count,error}=await q;if(error)throw fail('Usage unavailable.');return count;};const [halls,staff]=await Promise.all([count('halls'),count('staff',true)]);res.json({organization:req.organization,subscription:req.subscription,entitlement:req.entitlement,usage:{halls,staff},billingEnabled,billingMode,payments:await result(req.db.from('billing_payments').select('*').eq('tenant_id',req.organization.id).order('captured_at',{ascending:false}).limit(50))});}));

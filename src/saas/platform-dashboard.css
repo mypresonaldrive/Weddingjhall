@@ -6,3 +6,34 @@
 
 .platform-plan-tools{display:flex;justify-content:flex-end;margin-bottom:16px}
 .platform-overview .saas-table td{padding:10px 16px;font-size:11px}.platform-overview .saas-table th{padding:10px 16px;font-size:10px}.platform-overview .saas-company strong{font-size:12px}.platform-overview .saas-company small{font-size:10px}.platform-ready>div{padding:10px 0}.platform-charts>section{align-self:stretch}.platform-overview .saas-panel{box-shadow:0 2px 8px #29296603}
+
+/* notification centre + branding */
+.platform-notifications{display:block;}
+.platform-notify-tabs{margin:0 0 20px;}
+.platform-notify-tabs button{display:inline-flex;align-items:center;gap:7px;}
+.platform-plan-tools:has(.platform-notify-hint){justify-content:space-between;align-items:center;gap:14px;}
+.platform-notify-hint{display:flex;align-items:center;gap:9px;font-size:10px;color:var(--saas-muted);line-height:1.6;}
+.platform-notify-hint svg{flex:none;color:var(--saas-accent);}
+.platform-notify-title{display:flex;align-items:flex-start;gap:10px;white-space:normal;min-width:240px;}
+.platform-notify-title svg{flex:none;color:var(--saas-accent);margin-top:2px;}
+.platform-notify-title strong{font-size:11px;display:block;color:var(--saas-text);}
+.platform-notify-title small{display:block;font-size:9px;color:var(--saas-muted);margin-top:3px;white-space:normal;max-width:380px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.platform-when{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.platform-notify-actions .saas-icon{margin-right:5px;}
+.platform-template-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-bottom:24px;}
+.platform-template{padding:24px;display:flex;flex-direction:column;}
+.platform-template>div:first-child{display:flex;align-items:center;justify-content:space-between;}
+.platform-template h2{font-size:15px;margin:16px 0 7px;line-height:1.4;}
+.platform-template>p{font-size:11px;line-height:1.7;margin-bottom:14px;}
+.platform-template dl{padding:11px 0;margin:0 0 6px;border-top:1px solid var(--saas-line);font-size:10px;}
+.platform-template dl>div{display:flex;justify-content:space-between;gap:12px;padding:4px 0;}
+.platform-template dt{color:var(--saas-muted);}
+.platform-template dd{font-weight:600;text-align:right;overflow-wrap:anywhere;}
+.platform-template .saas-button-row{margin-top:auto;}
+.branding-card{margin-top:20px;padding-bottom:6px;}
+.branding-fields{grid-template-columns:1fr 1fr;}
+.branding-fields .full{grid-column:1/-1;margin-bottom:17px;}
+@media(max-width:1000px){.platform-template-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.platform-template-grid,.branding-fields{grid-template-columns:1fr;}
+.platform-plan-tools:has(.platform-notify-hint){flex-direction:column;align-items:stretch;}
+}

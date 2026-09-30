@@ -14,7 +14,7 @@ export function validateConfig(kind,c,enabled){
  const out={};for(const [key] of integrationFields[kind].fields)out[key]=z.string().trim().max(4096).parse(c[key]||'');
  for(const [key,value] of Object.entries(out)){const error=providerInputError(kind,key,value);if(error)throw Object.assign(Error(error),{status:400});}
  if(!enabled)return out;
- if(Object.values(out).some(v=>!v))throw Object.assign(Error('Complete all provider fields before enabling.'),{status:400});
+ if(Object.entries(out).some(([k,v])=>!v&&k!=='vapidKey'))throw Object.assign(Error('Complete all required provider fields before enabling.'),{status:400});
  if(kind==='razorpay'){z.string().regex(/^rzp_(test|live)_[A-Za-z0-9]+$/).parse(out.keyId);if(out.keyId.startsWith('rzp_test_')&&process.env.NODE_ENV==='production'&&process.env.ALLOW_TEST_BILLING!=='true')throw Object.assign(Error('Enable ALLOW_TEST_BILLING in staging before using test keys.'),{status:400});}
  if(kind==='email'){z.enum(['465','587']).parse(out.port);z.email().parse(out.from);z.string().regex(/^[a-zA-Z0-9.-]+$/).max(253).parse(out.host);}
  if(['sms','whatsapp'].includes(kind)&&out.approved!=='true')throw Object.assign(Error('Confirm provider template approval before enabling this channel.'),{status:400});

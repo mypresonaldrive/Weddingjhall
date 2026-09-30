@@ -9,7 +9,7 @@
     "worker": "node server/message-worker.js",
     "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs && node tests/booking-flow.mjs",
     "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs",
-    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs && node tests/saas-concurrency.mjs && node tests/platform-series.mjs && node tests/plan-recommendation.mjs",
+    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs && node tests/saas-concurrency.mjs && node tests/platform-series.mjs && node tests/plan-recommendation.mjs && node tests/notifications-sql.mjs",
     "test:saas:http": "npm run build && node tests/saas-http.mjs",
     "test:saas:ui": "node tests/saas-ui.mjs",
     "test:marketing:ui": "node tests/marketing-ui.mjs",
