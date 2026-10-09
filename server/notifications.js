@@ -4,7 +4,7 @@
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
 import {readIntegration} from './integrations.js';
-import {sendProvider} from './messaging.js';
+import nodemailer from 'nodemailer';
 import {sendWebPush} from './push.js';
 const category=z.enum(['announcement','maintenance','billing','event','system']);
 const media=z.enum(['banner','popup','push','email']);
@@ -157,9 +157,10 @@ export function startNotificationWorker({admin,result,rpc,keepAlive=true}){
    const to=String(org?.billing_email||'').trim();
    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){await rpc('notifications_outbound_done',{p_kind:'email',p_id:n.id}).catch(()=>{});continue;}
    try{const text=(n.title+'\n\n'+n.body+'\n\n— Platform notice · replies to this address are not monitored.').slice(0,4000);
-    const out=await sendProvider('email',cfg.config,to,text,{});
-    if(out.outcome==='sent'||out.outcome==='failed')await rpc('notifications_outbound_done',{p_kind:'email',p_id:n.id}).catch(()=>{});
-    else await rpc('notifications_outbound_release',{p_kind:'email',p_id:n.id}).catch(()=>{});}catch{await rpc('notifications_outbound_release',{p_kind:'email',p_id:n.id}).catch(()=>{});}
+    const port=Number(cfg.config.port)||587;
+    const transport=nodemailer.createTransport({host:cfg.config.host,port,secure:port===465,auth:{user:cfg.config.user,pass:cfg.config.password},connectionTimeout:10000,socketTimeout:15000});
+    await transport.sendMail({from:cfg.config.from,to,subject:n.title||'Platform notice',text});transport.close();
+    await rpc('notifications_outbound_done',{p_kind:'email',p_id:n.id}).catch(()=>{});}catch(e){console.error('Email send failed:',e?.message||e);await rpc('notifications_outbound_release',{p_kind:'email',p_id:n.id}).catch(()=>{});}
   }
  }
  async function tick(){if(busy||stopped)return;busy=true;try{await dispatchDue();await generateReminders();await sendPush();await sendEmails();await sweepExpired();}catch(e){console.error('Notification worker:',e?.message||e);}finally{busy=false;}}
