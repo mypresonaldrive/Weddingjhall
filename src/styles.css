@@ -23,3 +23,5 @@
 @media(max-width:700px){.settings-tabs{width:100%;overflow-x:auto;}
 .feed-item small{-webkit-line-clamp:3;}
 }
+
+.feed-item.read{opacity:.72}

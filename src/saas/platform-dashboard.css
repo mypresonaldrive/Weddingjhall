@@ -37,3 +37,10 @@
 @media(max-width:700px){.platform-template-grid,.branding-fields{grid-template-columns:1fr;}
 .platform-plan-tools:has(.platform-notify-hint){flex-direction:column;align-items:stretch;}
 }
+
+/* lifetime totals + logo upload */
+.platform-lifetime{padding:13px 20px;margin-bottom:18px;font-size:10.5px;color:var(--saas-muted)}
+.platform-lifetime strong{color:var(--saas-accent);font-weight:650}
+.upload-row{display:block;padding:12px;border:1px dashed #cfc9e6;border-radius:9px;background:#fafaff}
+.upload-row input{all:unset;display:block;font-size:10px;color:var(--saas-muted);width:100%}
+.upload-row small{display:block;margin-top:6px;font-size:9px;color:var(--saas-muted)}

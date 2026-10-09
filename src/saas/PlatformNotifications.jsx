@@ -6,7 +6,7 @@ import {Badge,Notice,Modal,Submit,Loading} from './components.jsx';
 import {saasApi,date} from './api.js';
 const icons={announcement:Megaphone,billing:Wallet,maintenance:SettingsIcon,event:CalendarCheck,system:ShieldCheck};
 const categories=['announcement','maintenance','billing','event','system'];
-const medias=['banner','popup','push'];
+const medias=['banner','popup','push','email'];
 const audiences=[['all','All organizations'],['trial','Organizations in trial']];
 const empty={category:'announcement',audience:'all',media:'banner',title:'',body:'',status:'draft',scheduledAt:''};
 const previewData={
@@ -38,10 +38,11 @@ export default function PlatformNotifications({preview=false}){
  const fill=(tpl)=>{const sample=Object.fromEntries((tpl.variables||[]).map(v=>[v,v==='days'?'5':v==='date'?'12 Oct 2026':v==='balance'?'₹ 12,500':v==='venue'?'Crystal ballroom':v==='duration'?'morning':v==='organization'?'The Grand Estate':v==='booking'?'Sharma wedding':'sample']));const render=t=>t.replaceAll(/\{\{(\w+)\}\}/g,(_,k)=>sample[k]??'');return {title:render(tpl.title),body:render(tpl.body)};};
  if(!data)return <>{error?<Notice error>{error}</Notice>:<Loading/>}</>;
  return <div className="platform-notifications">
+  {preview&&<Notice>Design preview: sample broadcasts and templates — nothing is dispatched and saving is disabled.</Notice>}
   <div className="saas-segment platform-notify-tabs">{[['broadcasts','Broadcasts',Rss],['templates','Reminder templates',ScrollText]].map(([id,label,Icon])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={15}/> {label}</button>)}</div>
   {error&&<Notice error>{error}</Notice>}{notice&&<Notice>{notice}</Notice>}
   {tab==='broadcasts'&&<>
-   <div className="platform-plan-tools"><div className="platform-notify-hint"><Bell size={15}/> Categories, audience, media (banner / popup / push), and schedules. Dispatch is idempotent and audited.</div><button className="saas-button primary" onClick={()=>setModal({kind:'broadcast',values:{...empty}})}><Plus size={15}/>New broadcast</button></div>
+   <div className="platform-plan-tools"><div className="platform-notify-hint"><Bell size={15}/> Categories, audience, media (banner / popup / push / email), and schedules. Dispatch is idempotent and audited.</div><button className="saas-button primary" onClick={()=>setModal({kind:'broadcast',values:{...empty}})}><Plus size={15}/>New broadcast</button></div>
    <section className="saas-panel"><div className="saas-table-wrap"><table className="saas-table"><thead><tr><th>Broadcast</th><th>Category</th><th>Media</th><th>Audience</th><th>Status</th><th>Timing</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
     {data.notifications.map(n=><tr key={n.id}><td><div className="platform-notify-title">{card.icon(n.category)}<div><strong>{n.title}</strong><small>{n.body}</small></div></div></td><td><Badge value={n.category}/></td><td>{n.media}</td><td>{n.audience==='trial'?'Trial organizations':'All organizations'}</td><td><Badge value={n.status}/></td><td>{n.status==='scheduled'?<span className="platform-when"><CalendarClock size={13}/> {date(n.scheduled_at)}</span>:n.sent_at?date(n.sent_at):'—'}</td><td className="platform-notify-actions">{['draft','scheduled'].includes(n.status)&&<button className="saas-icon" aria-label={'Send '+n.title} disabled={busy||preview} onClick={()=>run(()=>saasApi('/platform/notifications/dispatch','POST',{id:n.id}),'Broadcast dispatched to its audience.')}><Send size={15}/></button>}{['draft','scheduled'].includes(n.status)&&<button className="saas-icon" aria-label={'Edit '+n.title} onClick={()=>setModal({kind:'broadcast',values:{id:n.id,revision:n.revision,category:n.category,audience:n.audience,media:n.media,title:n.title,body:n.body,status:n.status,scheduledAt:n.scheduled_at?String(n.scheduled_at).slice(0,16):''}})}><Pencil size={15}/></button>}{['draft','scheduled'].includes(n.status)&&<button className="saas-icon" aria-label={'Cancel '+n.title} disabled={busy||preview} onClick={()=>run(()=>saasApi('/platform/notifications/cancel','POST',{id:n.id}),'Broadcast cancelled.')}><Ban size={15}/></button>}</td></tr>)}
    </tbody></table>{!data.notifications.length&&<div className="saas-empty">No broadcasts yet. Create the first announcement.</div>}</div></section></>}
@@ -69,7 +70,7 @@ function BroadcastEditor({values,busy,onClose,onSave}){
    <label>Audience<select value={v.audience} onChange={e=>set('audience',e.target.value)}>{audiences.map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
    <label>Media / type<select value={v.media} onChange={e=>set('media',e.target.value)}>{medias.map(m=><option key={m}>{m}</option>)}</select></label>
    <label>Delivery<select value={v.status} onChange={e=>set('status',e.target.value)}><option value="draft">Save as draft</option><option value="scheduled">Schedule for later</option></select></label>
-   {v.status==='scheduled'&&<label>Schedule time (IST)<input type="datetime-local" value={v.scheduledAt} onChange={e=>set('scheduledAt',e.target.value)}/></label>}
+   {v.status==='scheduled'&&<label>Schedule time (your local time — saved to the server clock)<input type="datetime-local" value={v.scheduledAt} onChange={e=>set('scheduledAt',e.target.value)}/></label>}
   </div>
   <label>Title<input required maxLength={160} value={v.title} onChange={e=>set('title',e.target.value)} placeholder="Short, clear title"/></label>
   <label>Message<textarea required maxLength={2000} rows={4} value={v.body} onChange={e=>set('body',e.target.value)} placeholder="What should teams know?"/></label>

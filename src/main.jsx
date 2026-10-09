@@ -15,3 +15,5 @@ const VenueWorkspace=lazy(()=>import('./Workspace.jsx'));
 function Workspace(props){return <ChunkBoundary><Suspense fallback={<Loading/>}><VenueWorkspace {...props}/></Suspense></ChunkBoundary>;}
 initializeAppearance();
 createRoot(document.getElementById('root')).render(<AppearanceProvider><Runtime Workspace={Workspace}/></AppearanceProvider>);
+// PWA: static asset caching + browser push delivery (never caches API/auth data).
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
