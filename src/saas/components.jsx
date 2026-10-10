@@ -6,7 +6,7 @@ export function Badge({value}){const key=String(value||'pending').toLowerCase();
 export function Notice({children,error=false}){return <div className={'saas-notice '+(error?'error':'')} role={error?'alert':'status'}><ShieldCheck size={17}/><span>{children}</span></div>;}
 export function Loading(){const [slow,setSlow]=useState(false),[verySlow,setVerySlow]=useState(false);
  useEffect(()=>{const a=setTimeout(()=>setSlow(true),6000),b=setTimeout(()=>setVerySlow(true),18000);return()=>{clearTimeout(a);clearTimeout(b);};},[]);
- return <div className="saas-loading"><span className="loading-pulse"><Flower2 size={32}/></span><p>Preparing your workspace…</p>{slow&&<small>{verySlow?'Still connecting — the server may be starting up.':'Almost there — the first connection after a quiet period takes a little longer.'}</small>}{verySlow&&<button className="saas-button" onClick={()=>location.reload()}>Reload now</button>}</div>;}
+ return <div className="saas-loading" role="status"><div className="saas-splash"><span className="loading-pulse"><Flower2 size={34} strokeWidth={1.4}/></span><strong className="saas-splash-brand">gatherhall<span>.</span></strong><span className="saas-splash-dots"><i/><i/><i/></span><p>Preparing your workspace…</p>{slow&&<small>{verySlow?'Still connecting — the server may be starting up.':'Almost there — the first connection after a quiet period takes a little longer.'}</small>}{verySlow&&<button className="saas-button" onClick={()=>location.reload()}>Reload now</button>}</div></div>;}
 export class ChunkBoundary extends React.Component{constructor(props){super(props);this.state={error:null};}
  static getDerivedStateFromError(error){return {error};}
  componentDidCatch(error){console.error('ChunkBoundary',error);}
