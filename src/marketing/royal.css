@@ -446,11 +446,6 @@ body:has(.mk-site[data-mk-theme=ivory]){background:#f6efdd}
 /* Perf: no backdrop blur in the hero widgets (solid glass instead) */
 .mk-site[data-mk-theme=royal] .home-event-card,.mk-site[data-mk-theme=royal] .home-photo-label{backdrop-filter:none;background:#290a16e8}
 /* Royal splash */
-.mk-site[data-mk-theme=royal] .mk-splash em-block{display:none}
-.mk-site[data-mk-theme=royal] .mk-splash-emblem{color:var(--rk-gold);border-color:var(--rk-line);background:radial-gradient(circle at 32% 28%,#4d1930,#2c0815);box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 0 0 6px rgba(217,180,95,.07)}
-.mk-site[data-mk-theme=royal] .mk-splash-brand{color:var(--rk-cream)}.mk-site[data-mk-theme=royal] .mk-splash-brand span{color:var(--rk-gold)}
-.mk-site[data-mk-theme=royal] .mk-splash p{color:var(--rk-mute)}
-.mk-site[data-mk-theme=royal] .mk-splash-dots i{background:var(--rk-gold-dim)}
 
 /* Ivory brand emblem ring + hero/panel polish */
 .mk-site[data-mk-theme=ivory] .mk-brand>span:first-child,.mk-site[data-mk-theme=ivory].mk-home .mk-brand>span:first-child{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--iv-line);background:radial-gradient(circle at 35% 30%,#fffaf0,#efe0bd);flex-shrink:0}
@@ -460,7 +455,3 @@ body:has(.mk-site[data-mk-theme=ivory]){background:#f6efdd}
 .mk-site[data-mk-theme=ivory] .home-exp-tile{background:rgba(255,253,246,.9);border:1px solid var(--iv-line-soft);border-radius:22px;padding:20px 16px 22px;transition:border-color .2s}
 .mk-site[data-mk-theme=ivory] .home-exp-tile:hover{border-color:var(--iv-line)}
 .mk-site[data-mk-theme=ivory] .home-event-card,.mk-site[data-mk-theme=ivory] .home-photo-label{backdrop-filter:none;background:#fffcf4f2}
-.mk-site[data-mk-theme=ivory] .mk-splash-emblem{color:var(--iv-gold-deep);border-color:var(--iv-line);background:radial-gradient(circle at 32% 28%,#fffaf0,#f2e5c8);box-shadow:0 16px 38px rgba(74,13,32,.16),inset 0 0 0 6px #ffffff90}
-.mk-site[data-mk-theme=ivory] .mk-splash-brand{color:var(--iv-ink)}.mk-site[data-mk-theme=ivory] .mk-splash-brand span{color:var(--iv-gold)}
-.mk-site[data-mk-theme=ivory] .mk-splash p{color:var(--iv-mute)}
-.mk-site[data-mk-theme=ivory] .mk-splash-dots i{background:#b08a3e}

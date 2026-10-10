@@ -26,14 +26,3 @@
 
 .feed-item.read{opacity:.72}
 
-/* Workspace / platform splash. */
-.saas-loading{min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(900px 480px at 50% -10%,#efeafb,#f6f4fb 60%),#f6f4fb;padding:30px}
-.saas-splash{display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;max-width:400px;background:#ffffffd9;border:1px solid #e7e1f2;border-radius:22px;padding:44px 48px;box-shadow:0 24px 60px #5b4a7a17,0 2px 6px #5b4a7a0d}
-.loading-pulse{display:grid;place-items:center;width:82px;height:82px;border-radius:50%;color:#6d5fa6;border:1.5px solid #dcd3ee;background:radial-gradient(circle at 32% 28%,#ffffff,#efeaf8);box-shadow:inset 0 0 0 6px #ffffff90,0 14px 34px #6b5a8624;animation:mk-breathe 2.6s ease-in-out infinite}
-.saas-splash-brand{font-family:'Manrope',Arial,sans-serif;font-size:28px;font-weight:750;letter-spacing:-1.3px;color:#2d2946;margin-top:4px}.saas-splash-brand span{color:#9d8cc9}
-.saas-splash-dots{display:flex;gap:7px}.saas-splash-dots i{width:7px;height:7px;border-radius:50%;background:#ac9cd4;animation:mk-dot 1.2s ease-in-out infinite}.saas-splash-dots i:nth-child(2){animation-delay:.18s}.saas-splash-dots i:nth-child(3){animation-delay:.36s}
-.saas-splash p{margin:2px 0 0;font-size:13px;color:#73688a}
-.saas-splash small{font-size:11px;line-height:1.7;color:#8a7d9e}
-@keyframes mk-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes mk-dot{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-6px);opacity:1}}
-@media(prefers-reduced-motion:reduce){.loading-pulse,.saas-splash-dots i,.mk-splash-dots i,.mk-splash-emblem{animation:none}}
