@@ -1,0 +1,2 @@
+/* Dashboard-only spacing. Public marketing and authentication pages retain their headings. */
+.app .resource-heading{justify-content:flex-end;margin:0 0 16px;min-height:0}.app .resource-heading:has(>h1:only-child){display:none}.workspace-dashboard-tools{display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px}.app .breadcrumb strong{font-size:14px}.app .page-footer{margin-top:20px}

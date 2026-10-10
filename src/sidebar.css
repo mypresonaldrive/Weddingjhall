@@ -1,0 +1,23 @@
+/* A persistent desktop preference; a separate temporary drawer on mobile. */
+:root[data-theme] .sidebar-toggle{display:inline-flex;min-width:40px;min-height:40px;border:1px solid var(--border);background:var(--surface);color:var(--ink);margin-right:8px}
+:root[data-theme] .sidebar-toggle:hover{background:var(--selected);border-color:var(--primary);color:var(--primary)}
+.sidebar-close{display:none}
+@media(min-width:701px){
+ .sidebar{transition:transform .2s ease,visibility .2s ease}
+ .main-shell{transition:margin-left .2s ease}
+ .sidebar-collapsed .sidebar{transform:translateX(-100%);visibility:hidden;pointer-events:none}
+ .sidebar-collapsed .main-shell{margin-left:0}
+}
+@media(max-width:700px){
+ :root[data-theme] .sidebar{width:min(300px,calc(100vw - 44px));padding-top:64px;box-shadow:10px 0 40px var(--shadow);visibility:hidden}
+ :root[data-theme] .sidebar.is-open{visibility:visible}
+ :root[data-theme] .sidebar-close{display:inline-flex;position:absolute;top:12px;right:14px;min-width:44px;min-height:44px;background:var(--subtle);color:var(--ink)}
+ :root[data-theme] .sidebar-toggle{min-width:44px;min-height:44px;margin-right:2px}
+ :root[data-theme] .breadcrumb>span{display:none}
+ :root[data-theme] .breadcrumb>svg{display:none}
+ :root[data-theme] .breadcrumb{min-width:0}
+ :root[data-theme] .breadcrumb>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ :root[data-theme] .topbar-right{flex-shrink:0}
+ :root[data-theme] .sidebar-backdrop{background:var(--overlay)}
+}
+@media(prefers-reduced-motion:reduce){.sidebar,.main-shell{transition:none}}

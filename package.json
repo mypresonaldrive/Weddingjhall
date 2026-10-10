@@ -1,0 +1,43 @@
+{
+  "name": "gatherhall",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server.js",
+    "worker": "node server/message-worker.js",
+    "test": "node tests/appearance.mjs && node tests/api.mjs && node tests/packages.mjs && node tests/food-menus.mjs && node tests/booking-flow.mjs",
+    "test:deployment": "npm run build && node tests/appearance.mjs && node tests/deployment.mjs",
+    "test:saas": "node tests/saas-core.mjs && node tests/cms-schema.mjs && node tests/saas-database.mjs && node tests/saas-concurrency.mjs && node tests/platform-series.mjs && node tests/plan-recommendation.mjs && node tests/notifications-sql.mjs",
+    "test:saas:http": "npm run build && node tests/saas-http.mjs",
+    "test:saas:ui": "node tests/saas-ui.mjs",
+    "test:marketing:ui": "node tests/marketing-ui.mjs",
+    "test:messaging": "node tests/messaging.mjs && node tests/messaging-worker.mjs && node tests/messaging-worker-stop.mjs && node tests/messaging-http.mjs",
+    "test:messaging:ui": "node tests/messaging-ui.mjs",
+    "test:settings:ui": "node tests/settings-ux.mjs",
+    "test:dashboard:ui": "node tests/dashboard-ui.mjs",
+    "test:home:ui": "node tests/home-ui.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.3.0",
+    "lucide-react": "^0.468.0",
+    "nodemailer": "^10.0.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "vite": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
